@@ -1,27 +1,168 @@
-# Chottola E-Commerce Platform
+# Chottola E-commerce Website
 
-A modern, full-stack e-commerce platform for a packet food shop built with the MERN stack (MongoDB, Express.js, React, Node.js).
+A full-stack MERN (MongoDB, Express, React, Node.js) e-commerce platform for selling imported food, bakery items, frozen foods, and specialty products.
 
-## 🚀 Features
+## 🚀 Live Demo
 
-### Customer Features
-- Browse and search products
-- Filter products by category, price, and ratings
-- Add products to cart and wishlist
-- User authentication (register/login)
-- Place orders with multiple payment methods
-- Track order status
-- Write product reviews
-- Manage user profile
+- **Frontend**: [http://localhost:5173](http://localhost:5173)
+- **Backend API**: [http://localhost:5000](http://localhost:5000)
 
-### Admin Features
-- Dashboard with analytics and statistics
-- Manage products (CRUD operations)
-- Manage categories
-- Order management
-- User management
-- Inventory tracking
-- View sales reports
+## 📋 Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Installation](#installation)
+- [Environment Variables](#environment-variables)
+- [Running the Application](#running-the-application)
+- [API Documentation](#api-documentation)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+
+## ✨ Features
+
+### ✅ Completed Features
+
+#### 🔐 Authentication & Security
+- [x] User registration with email verification
+- [x] Secure login with JWT tokens
+- [x] Password hashing with bcrypt
+- [x] Role-based access control (Admin, User)
+- [x] Protected routes and middleware
+- [x] CORS protection
+- [x] Rate limiting
+- [x] XSS protection
+- [x] SQL injection prevention
+- [x] Helmet security headers
+
+#### 🛍️ Product Management
+- [x] Complete CRUD operations for products
+- [x] Product categorization
+- [x] Multi-image upload with Cloudinary
+- [x] Product variants and attributes
+- [x] SKU and barcode support
+- [x] Stock management
+- [x] Price and discount management
+- [x] Featured products
+- [x] Product ratings and reviews
+- [x] Bulk product operations (Admin)
+
+#### 🔍 Advanced Search & Filtering
+- [x] Full-text search across products
+- [x] Search by name, brand, description, tags, SKU
+- [x] Real-time search suggestions
+- [x] Multi-select category filtering
+- [x] Multi-select brand filtering
+- [x] Price range filtering
+- [x] Stock availability filter
+- [x] Rating filter
+- [x] Featured products filter
+- [x] 9 sorting options:
+  - Newest/Oldest
+  - Price: Low to High/High to Low
+  - Name: A-Z/Z-A
+  - Popularity (most purchased)
+  - Highest rated
+  - Biggest discount
+- [x] URL state management for filters
+- [x] Debounced search (300ms)
+- [x] Performance-optimized with MongoDB indexes
+
+#### 🛒 Shopping Cart & Checkout
+- [x] Add/remove products from cart
+- [x] Update product quantities
+- [x] Real-time price calculations
+- [x] Cart persistence (localStorage + backend)
+- [x] Cart count badge in navigation
+- [x] Authentication-aware cart sync
+- [x] Discount and coupon support
+- [x] Tax and shipping calculations
+- [x] Empty cart state
+- [x] Complete checkout process
+- [x] Order summary
+- [x] Multiple payment methods
+- [x] Cash on Delivery (COD) implemented
+- [x] Order placement with inventory validation
+
+#### 📦 Order Management
+- [x] Order creation with transaction support
+- [x] Order history for users
+- [x] Order details view
+- [x] Order status tracking
+- [x] Admin order management
+- [x] Order status updates
+- [x] Inventory sync on order placement
+- [x] Order cancellation
+- [x] Shipping information
+
+#### 📊 Category Management
+- [x] Category CRUD operations
+- [x] Hierarchical categories (parent/child)
+- [x] Category slug generation
+- [x] Category images
+- [x] Featured categories
+- [x] Product count per category
+
+#### 👤 User Management
+- [x] User profile management
+- [x] Update profile information
+- [x] Change password
+- [x] Order history
+- [x] Address management
+- [x] Admin user management
+- [x] User role assignment
+
+#### ⭐ Reviews & Ratings
+- [x] Product reviews
+- [x] 5-star rating system
+- [x] Review moderation
+- [x] Average rating calculation
+- [x] Review filtering by rating
+- [x] Verified purchase reviews
+
+#### 📱 UI/UX Features
+- [x] Responsive design (mobile, tablet, desktop)
+- [x] Modern, clean interface
+- [x] Tailwind CSS styling
+- [x] Loading states and spinners
+- [x] Toast notifications
+- [x] Error handling
+- [x] Form validation
+- [x] Pagination
+- [x] Quick search in navbar
+- [x] Product cards with hover effects
+- [x] Image optimization
+- [x] Smooth animations and transitions
+
+#### 🎯 Admin Panel Features
+- [x] Admin dashboard
+- [x] Product management interface
+- [x] Category management
+- [x] User management
+- [x] Order management
+- [x] Stock management
+- [x] Bulk operations
+- [x] Analytics and reports
+
+#### 🏪 Food-Specific Features
+- [x] Expiry date tracking
+- [x] Batch number management
+- [x] Nutritional information
+- [x] Allergen warnings
+- [x] Ingredient lists
+- [x] Storage requirements
+- [x] Country of origin
+- [x] Certifications (Halal, Organic, etc.)
+- [x] Weight and dimensions
+
+#### 🔧 Performance Optimizations
+- [x] MongoDB compound indexes
+- [x] Aggregation pipelines
+- [x] Debounced search inputs
+- [x] Lazy loading
+- [x] Efficient pagination
+- [x] Optimized database queries
+- [x] Field projection
+- [x] Response caching potential
 
 ## 🛠️ Tech Stack
 

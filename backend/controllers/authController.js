@@ -21,9 +21,21 @@ exports.register = async (req, res, next) => {
 
     const { name, email, password, phone } = req.body;
 
+    // Validate at least one of email or phone is provided
+    if (!email && !phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Either email or phone number must be provided'
+      });
+    }
+
     // Check if user already exists
+    const existingUserQuery = [];
+    if (email) existingUserQuery.push({ email: email.toLowerCase() });
+    if (phone) existingUserQuery.push({ phone });
+    
     const userExists = await User.findOne({ 
-      $or: [{ email }, { phone }] 
+      $or: existingUserQuery
     });
     
     if (userExists) {
@@ -36,17 +48,14 @@ exports.register = async (req, res, next) => {
     }
 
     // Create user with enhanced security
-    const user = await User.create({
+    const userData = {
       name,
-      email: email.toLowerCase(),
-      password,
-      phone,
-      security: {
-        loginAttempts: 0,
-        lockUntil: null,
-        twoFactorEnabled: false
-      }
-    });
+      password
+    };
+    if (email) userData.email = email.toLowerCase();
+    if (phone) userData.phone = phone;
+    
+    const user = await User.create(userData);
 
     // Generate tokens
     const { accessToken, refreshToken } = generateToken(user._id);
@@ -69,7 +78,8 @@ exports.register = async (req, res, next) => {
           email: user.email,
           phone: user.phone,
           role: user.role,
-          isEmailVerified: user.verification.email.isVerified
+          emailVerified: user.emailVerified,
+          phoneVerified: user.phoneVerified
         },
         accessToken
       }
@@ -93,27 +103,32 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    const { email, password, rememberMe } = req.body;
+    const { identifier, email, password, rememberMe } = req.body;
     const ipAddress = req.ip || req.connection.remoteAddress;
 
+    // Support both old (email) and new (identifier) format
+    const loginIdentifier = identifier || email;
+    
+    if (!loginIdentifier) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email or phone number'
+      });
+    }
+
+    // Check if identifier is email or phone
+    const isEmail = loginIdentifier.includes('@');
+    const query = isEmail ? 
+      { email: loginIdentifier.toLowerCase() } : 
+      { phone: loginIdentifier };
+
     // Check if user exists and select password field
-    const user = await User.findOne({ 
-      email: email.toLowerCase() 
-    }).select('+password +security.loginAttempts +security.lockUntil');
+    const user = await User.findOne(query).select('+password');
     
     if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
-      });
-    }
-
-    // Check if account is locked
-    if (user.security.lockUntil && user.security.lockUntil > Date.now()) {
-      const lockTimeRemaining = Math.ceil((user.security.lockUntil - Date.now()) / (1000 * 60));
-      return res.status(423).json({
-        success: false,
-        message: `Account is locked. Please try again in ${lockTimeRemaining} minutes.`
       });
     }
 
@@ -129,29 +144,14 @@ exports.login = async (req, res, next) => {
     const isPasswordMatch = await user.comparePassword(password);
     
     if (!isPasswordMatch) {
-      // Increment login attempts
-      await user.incLoginAttempts();
-      
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials',
-        attemptsRemaining: Math.max(0, 5 - (user.security.loginAttempts + 1))
+        message: 'Invalid credentials'
       });
     }
 
-    // Reset login attempts on successful login
-    if (user.security.loginAttempts > 0) {
-      user.security.loginAttempts = 0;
-      user.security.lockUntil = null;
-      await user.save();
-    }
-
-    // Update last login info
-    user.lastLogin = {
-      date: new Date(),
-      ipAddress,
-      userAgent: req.get('User-Agent')
-    };
+    // Update last login
+    user.lastLogin = new Date();
     await user.save();
 
     // Generate tokens
@@ -176,10 +176,9 @@ exports.login = async (req, res, next) => {
           email: user.email,
           phone: user.phone,
           role: user.role,
-          permissions: user.permissions,
-          isEmailVerified: user.verification.email.isVerified,
-          loyaltyTier: user.loyalty.tier,
-          loyaltyPoints: user.loyalty.points
+          emailVerified: user.emailVerified,
+          phoneVerified: user.phoneVerified,
+          loyaltyPoints: user.loyaltyPoints
         },
         accessToken
       }

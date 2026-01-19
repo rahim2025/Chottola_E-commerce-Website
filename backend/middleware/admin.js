@@ -35,7 +35,8 @@ exports.requireAdmin = (req, res, next) => {
     });
   }
 
-  if (req.user.role !== 'admin') {
+  const adminRoles = ['admin', 'super-admin', 'moderator'];
+  if (!adminRoles.includes(req.user.role)) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Admin access required.',
@@ -57,7 +58,8 @@ exports.requireAdminPermission = (permission) => {
       });
     }
 
-    if (req.user.role !== 'admin') {
+    const adminRoles = ['admin', 'super-admin', 'moderator'];
+    if (!adminRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin access required.',
@@ -65,11 +67,18 @@ exports.requireAdminPermission = (permission) => {
       });
     }
 
-    if (!req.user.permissions.includes(permission)) {
+    // Super-admin has all permissions
+    if (req.user.role === 'super-admin') {
+      return next();
+    }
+
+    // Check permissions for regular admin and moderator
+    const userPermissions = req.user.adminData?.permissions || [];
+    if (!userPermissions.includes(permission)) {
       return res.status(403).json({
         success: false,
         message: `Access denied. Required permission: ${permission}`,
-        userPermissions: req.user.permissions,
+        userPermissions,
         requiredPermission: permission,
         code: 'INSUFFICIENT_ADMIN_PERMISSIONS'
       });
@@ -90,7 +99,8 @@ exports.requireAllAdminPermissions = (permissions) => {
       });
     }
 
-    if (req.user.role !== 'admin') {
+    const adminRoles = ['admin', 'super-admin', 'moderator'];
+    if (!adminRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin access required.',
@@ -98,8 +108,14 @@ exports.requireAllAdminPermissions = (permissions) => {
       });
     }
 
+    // Super-admin has all permissions
+    if (req.user.role === 'super-admin') {
+      return next();
+    }
+
+    const userPermissions = req.user.adminData?.permissions || [];
     const hasAllPermissions = permissions.every(permission => 
-      req.user.permissions.includes(permission)
+      userPermissions.includes(permission)
     );
     
     if (!hasAllPermissions) {
@@ -132,7 +148,8 @@ exports.requireAnyAdminPermission = (permissions) => {
       });
     }
 
-    if (req.user.role !== 'admin') {
+    const adminRoles = ['admin', 'super-admin', 'moderator'];
+    if (!adminRoles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Admin access required.',
@@ -140,8 +157,14 @@ exports.requireAnyAdminPermission = (permissions) => {
       });
     }
 
+    // Super-admin has all permissions
+    if (req.user.role === 'super-admin') {
+      return next();
+    }
+
+    const userPermissions = req.user.adminData?.permissions || [];
     const hasAnyPermission = permissions.some(permission => 
-      req.user.permissions.includes(permission)
+      userPermissions.includes(permission)
     );
     
     if (!hasAnyPermission) {
@@ -168,7 +191,7 @@ exports.requireSuperAdmin = (req, res, next) => {
     });
   }
 
-  if (req.user.role !== 'admin' || !req.user.permissions.includes('super_admin')) {
+  if (req.user.role !== 'super-admin') {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Super admin access required.',
@@ -183,7 +206,8 @@ exports.requireSuperAdmin = (req, res, next) => {
 exports.requireOwnershipOrAdmin = (resourceUserField = 'user') => {
   return (req, res, next) => {
     // Admin can access any resource
-    if (req.user.role === 'admin') {
+    const adminRoles = ['admin', 'super-admin', 'moderator'];
+    if (adminRoles.includes(req.user.role)) {
       return next();
     }
 
@@ -212,7 +236,22 @@ exports.requireUserManagement = (req, res, next) => {
     });
   }
 
-  if (req.user.role !== 'admin' || !req.user.permissions.includes('manage_users')) {
+  const adminRoles = ['admin', 'super-admin', 'moderator'];
+  if (!adminRoles.includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin access required.',
+      code: 'ADMIN_ACCESS_REQUIRED'
+    });
+  }
+
+  // Super-admin has all permissions
+  if (req.user.role === 'super-admin') {
+    return next();
+  }
+
+  const userPermissions = req.user.adminData?.permissions || [];
+  if (!userPermissions.includes('manage-users')) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. User management permission required.',
@@ -233,7 +272,22 @@ exports.requireProductManagement = (req, res, next) => {
     });
   }
 
-  if (req.user.role !== 'admin' || !req.user.permissions.includes('manage_products')) {
+  const adminRoles = ['admin', 'super-admin', 'moderator'];
+  if (!adminRoles.includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin access required.',
+      code: 'ADMIN_ACCESS_REQUIRED'
+    });
+  }
+
+  // Super-admin has all permissions
+  if (req.user.role === 'super-admin') {
+    return next();
+  }
+
+  const userPermissions = req.user.adminData?.permissions || [];
+  if (!userPermissions.includes('manage-products')) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Product management permission required.',
@@ -254,7 +308,22 @@ exports.requireOrderManagement = (req, res, next) => {
     });
   }
 
-  if (req.user.role !== 'admin' || !req.user.permissions.includes('manage_orders')) {
+  const adminRoles = ['admin', 'super-admin', 'moderator'];
+  if (!adminRoles.includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin access required.',
+      code: 'ADMIN_ACCESS_REQUIRED'
+    });
+  }
+
+  // Super-admin has all permissions
+  if (req.user.role === 'super-admin') {
+    return next();
+  }
+
+  const userPermissions = req.user.adminData?.permissions || [];
+  if (!userPermissions.includes('manage-orders')) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Order management permission required.',
@@ -275,7 +344,22 @@ exports.requireAnalytics = (req, res, next) => {
     });
   }
 
-  if (req.user.role !== 'admin' || !req.user.permissions.includes('view_analytics')) {
+  const adminRoles = ['admin', 'super-admin', 'moderator'];
+  if (!adminRoles.includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Admin access required.',
+      code: 'ADMIN_ACCESS_REQUIRED'
+    });
+  }
+
+  // Super-admin has all permissions
+  if (req.user.role === 'super-admin') {
+    return next();
+  }
+
+  const userPermissions = req.user.adminData?.permissions || [];
+  if (!userPermissions.includes('view-analytics')) {
     return res.status(403).json({
       success: false,
       message: 'Access denied. Analytics permission required.',

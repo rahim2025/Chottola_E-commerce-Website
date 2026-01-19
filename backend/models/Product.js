@@ -12,6 +12,11 @@ const productSchema = new mongoose.Schema({
     required: [true, 'Please provide a product description'],
     maxlength: [2000, 'Description cannot be more than 2000 characters']
   },
+  shortDescription: {
+    type: String,
+    maxlength: [280, 'Short description cannot be more than 280 characters'],
+    default: ''
+  },
   price: {
     type: Number,
     required: [true, 'Please provide a price'],
@@ -27,6 +32,10 @@ const productSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Discount percentage cannot be negative'],
     max: [100, 'Discount percentage cannot exceed 100']
+  },
+  currency: {
+    type: String,
+    default: 'BDT'
   },
   category: {
     type: mongoose.Schema.Types.ObjectId,
@@ -49,33 +58,13 @@ const productSchema = new mongoose.Schema({
       enum: ['g', 'kg', 'ml', 'l', 'oz', 'lb', 'piece', 'pack']
     }
   },
-  dimensions: {
-    length: { type: Number, default: 0 },
-    width: { type: Number, default: 0 },
-    height: { type: Number, default: 0 },
-    unit: { type: String, default: 'cm', enum: ['cm', 'inch'] }
-  },
-  expiryDate: {
-    type: Date,
-    required: [true, 'Please provide expiry date']
-  },
   manufactureDate: {
     type: Date,
     required: [true, 'Please provide manufacture date']
   },
-  batchNumber: {
-    type: String,
-    default: ''
-  },
-  barcode: {
-    type: String,
-    unique: true,
-    sparse: true
-  },
   sku: {
     type: String,
-    required: [true, 'Please provide SKU'],
-    unique: true
+    default: ''
   },
   images: [{
     url: {
@@ -110,46 +99,19 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  tags: [{
-    type: String,
-    lowercase: true
-  }],
-  ingredients: [{
-    name: { type: String, required: true },
-    percentage: { type: Number, min: 0, max: 100 }
-  }],
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  updatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
   allergens: [{
     type: String,
     enum: ['nuts', 'dairy', 'eggs', 'soy', 'wheat', 'fish', 'shellfish', 'sesame', 'gluten']
   }],
-  nutritionInfo: {
-    servingSize: {
-      value: { type: Number, default: 100 },
-      unit: { type: String, default: 'g' }
-    },
-    calories: { type: Number, default: 0 },
-    protein: { type: Number, default: 0 },
-    carbohydrates: { type: Number, default: 0 },
-    sugar: { type: Number, default: 0 },
-    fat: { type: Number, default: 0 },
-    saturatedFat: { type: Number, default: 0 },
-    fiber: { type: Number, default: 0 },
-    sodium: { type: Number, default: 0 },
-    vitamins: [{
-      name: String,
-      amount: Number,
-      unit: String
-    }]
-  },
-  storageInstructions: {
-    type: String,
-    default: 'Store in a cool, dry place'
-  },
-  origin: {
-    country: { type: String, default: '' },
-    manufacturer: { type: String, default: '' },
-    manufacturerAddress: { type: String, default: '' }
-  },
   certifications: [{
     type: String,
     enum: ['organic', 'fair-trade', 'non-gmo', 'halal', 'kosher', 'vegan', 'gluten-free']
@@ -204,17 +166,15 @@ productSchema.pre('save', function(next) {
 });
 
 // Index for better search performance
-productSchema.index({ name: 'text', description: 'text', tags: 'text', brand: 'text' });
+productSchema.index({ name: 'text', description: 'text', brand: 'text' });
 productSchema.index({ category: 1 });
 productSchema.index({ brand: 1 });
 productSchema.index({ price: 1 });
 productSchema.index({ 'ratings.average': -1 });
 productSchema.index({ createdAt: -1 });
-productSchema.index({ expiryDate: 1 });
-productSchema.index({ sku: 1 });
 
 // Create indexes for better performance
-productSchema.index({ name: 'text', description: 'text', brand: 'text', tags: 'text' });
+productSchema.index({ name: 'text', description: 'text', brand: 'text' });
 productSchema.index({ category: 1, isActive: 1 });
 productSchema.index({ brand: 1, isActive: 1 });
 productSchema.index({ price: 1, discountPrice: 1 });
@@ -223,6 +183,5 @@ productSchema.index({ averageRating: -1 });
 productSchema.index({ totalPurchases: -1 });
 productSchema.index({ isFeatured: -1, isActive: 1 });
 productSchema.index({ stock: 1, isActive: 1 });
-productSchema.index({ sku: 1 }, { unique: true });
 
 module.exports = mongoose.model('Product', productSchema);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Loader from '../../components/common/Loader';
+import api from '../../services/api';
 
 const AddProduct = () => {
   const navigate = useNavigate();
@@ -21,46 +22,16 @@ const AddProduct = () => {
       unit: 'g'
     },
     pricing: {
-      costPrice: '',
       sellingPrice: '',
       discountPrice: '',
       currency: 'BDT'
     },
-    nutrition: {
-      calories: '',
-      protein: '',
-      carbohydrates: '',
-      fat: '',
-      fiber: '',
-      sugar: '',
-      sodium: ''
-    },
     allergens: [],
-    ingredients: [],
     certifications: [],
-    storage: {
-      temperature: '',
-      humidity: '',
-      instructions: ''
-    },
-    origin: {
-      country: '',
-      manufacturer: '',
-      manufacturingDate: ''
-    },
-    tags: [],
     isActive: true,
     isFeatured: false,
     // Inventory data
-    initialStock: '',
-    reorderLevel: '',
-    maxStock: '',
-    batchInfo: {
-      batchNumber: '',
-      manufactureDate: '',
-      expiryDate: '',
-      costPrice: ''
-    }
+    initialStock: ''
   });
 
   const [images, setImages] = useState([]);
@@ -68,14 +39,13 @@ const AddProduct = () => {
 
   // Common allergens list
   const commonAllergens = [
-    'Gluten', 'Dairy', 'Eggs', 'Fish', 'Shellfish', 'Tree nuts', 
-    'Peanuts', 'Soy', 'Sesame', 'Mustard', 'Sulphites'
+    'Gluten', 'Dairy', 'Eggs', 'Soy', 'Wheat', 'Fish', 'Shellfish', 'Sesame', 'Nuts'
   ];
 
   // Common certifications
   const commonCertifications = [
     'Organic', 'Halal', 'Kosher', 'Non-GMO', 'Fair Trade', 
-    'Vegan', 'Vegetarian', 'Gluten-Free', 'Sugar-Free'
+    'Vegan', 'Gluten-Free'
   ];
 
   // Fetch categories
@@ -85,11 +55,8 @@ const AddProduct = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/categories');
-      if (response.ok) {
-        const data = await response.json();
-        setCategories(data.data);
-      }
+      const response = await api.get('/categories');
+      setCategories(response.data.data);
     } catch (error) {
       console.error('Failed to fetch categories:', error);
     }
@@ -190,20 +157,12 @@ const AddProduct = () => {
         }
       });
 
-      const response = await fetch('/api/products', {
-        method: 'POST',
+      const response = await api.post('/products', submitData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: submitData
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create product');
-      }
-
-      const data = await response.json();
       setSuccess('Product created successfully!');
       
       // Redirect after success
@@ -212,7 +171,7 @@ const AddProduct = () => {
       }, 2000);
 
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || 'Failed to create product');
     } finally {
       setLoading(false);
     }
@@ -315,7 +274,8 @@ const AddProduct = () => {
                     <option value="kg">kg</option>
                     <option value="ml">ml</option>
                     <option value="l">l</option>
-                    <option value="pieces">pieces</option>
+                    <option value="piece">piece</option>
+                    <option value="pack">pack</option>
                   </select>
                 </div>
               </div>
@@ -349,22 +309,7 @@ const AddProduct = () => {
           {/* Pricing */}
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-xl font-semibold mb-4">Pricing</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Cost Price *</label>
-                <input
-                  type="number"
-                  name="pricing.costPrice"
-                  value={formData.pricing.costPrice}
-                  onChange={handleInputChange}
-                  step="0.01"
-                  min="0"
-                  required
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="0.00"
-                />
-              </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Selling Price *</label>
                 <input
@@ -413,98 +358,20 @@ const AddProduct = () => {
           {/* Inventory */}
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="text-xl font-semibold mb-4">Initial Inventory</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <p className="text-sm text-gray-600 mb-4">Stock will be automatically updated when orders are confirmed</p>
+            <div className="max-w-md">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Initial Stock</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Stock Available *</label>
                 <input
                   type="number"
                   name="initialStock"
                   value={formData.initialStock}
                   onChange={handleInputChange}
                   min="0"
+                  required
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="0"
+                  placeholder="Enter available stock quantity"
                 />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Reorder Level</label>
-                <input
-                  type="number"
-                  name="reorderLevel"
-                  value={formData.reorderLevel}
-                  onChange={handleInputChange}
-                  min="0"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="10"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Maximum Stock</label>
-                <input
-                  type="number"
-                  name="maxStock"
-                  value={formData.maxStock}
-                  onChange={handleInputChange}
-                  min="0"
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="1000"
-                />
-              </div>
-            </div>
-
-            {/* Batch Information */}
-            <div className="mt-6">
-              <h3 className="text-lg font-medium mb-3">Batch Information (Optional)</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Batch Number</label>
-                  <input
-                    type="text"
-                    name="batchInfo.batchNumber"
-                    value={formData.batchInfo.batchNumber}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="BATCH-001"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Manufacture Date</label>
-                  <input
-                    type="date"
-                    name="batchInfo.manufactureDate"
-                    value={formData.batchInfo.manufactureDate}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
-                  <input
-                    type="date"
-                    name="batchInfo.expiryDate"
-                    value={formData.batchInfo.expiryDate}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Batch Cost Price</label>
-                  <input
-                    type="number"
-                    name="batchInfo.costPrice"
-                    value={formData.batchInfo.costPrice}
-                    onChange={handleInputChange}
-                    step="0.01"
-                    min="0"
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="0.00"
-                  />
-                </div>
               </div>
             </div>
           </div>
@@ -581,77 +448,6 @@ const AddProduct = () => {
                     <span className="text-sm">{certification}</span>
                   </label>
                 ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Information */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold mb-4">Additional Information</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Ingredients</label>
-                <textarea
-                  value={formData.ingredients.join(', ')}
-                  onChange={(e) => handleArrayInput('ingredients', e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Ingredient 1, Ingredient 2, Ingredient 3..."
-                  rows="3"
-                />
-                <p className="text-xs text-gray-500 mt-1">Separate ingredients with commas</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
-                <textarea
-                  value={formData.tags.join(', ')}
-                  onChange={(e) => handleArrayInput('tags', e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="organic, healthy, snack..."
-                  rows="3"
-                />
-                <p className="text-xs text-gray-500 mt-1">Separate tags with commas</p>
-              </div>
-            </div>
-
-            {/* Storage Instructions */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Storage Instructions</label>
-              <input
-                type="text"
-                name="storage.instructions"
-                value={formData.storage.instructions}
-                onChange={handleInputChange}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                placeholder="Store in a cool, dry place..."
-              />
-            </div>
-
-            {/* Origin Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Country of Origin</label>
-                <input
-                  type="text"
-                  name="origin.country"
-                  value={formData.origin.country}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Bangladesh"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Manufacturer</label>
-                <input
-                  type="text"
-                  name="origin.manufacturer"
-                  value={formData.origin.manufacturer}
-                  onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Manufacturer name"
-                />
               </div>
             </div>
           </div>

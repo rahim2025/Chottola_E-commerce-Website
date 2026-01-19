@@ -33,17 +33,8 @@ exports.createProductValidator = [
   body('description')
     .trim()
     .notEmpty().withMessage('Description is required'),
-  body('price')
-    .notEmpty().withMessage('Price is required')
-    .isNumeric().withMessage('Price must be a number')
-    .custom((value) => value >= 0).withMessage('Price cannot be negative'),
   body('category')
-    .notEmpty().withMessage('Category is required'),
-  body('weight')
-    .notEmpty().withMessage('Weight is required'),
-  body('stock')
-    .notEmpty().withMessage('Stock is required')
-    .isInt({ min: 0 }).withMessage('Stock must be a positive number')
+    .notEmpty().withMessage('Category is required')
 ];
 
 // Category validators

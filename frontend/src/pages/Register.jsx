@@ -7,6 +7,7 @@ const Register = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: ''
   });
@@ -24,6 +25,12 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate either email or phone is provided
+    if (!formData.email && !formData.phone) {
+      toast.error('Please provide either email or phone number');
+      return;
+    }
 
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
@@ -65,15 +72,26 @@ const Register = () => {
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-2">Email</label>
+              <label className="block text-gray-700 mb-2">Email <span className="text-gray-500 text-sm">(Optional if phone provided)</span></label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                required
                 className="input-field"
                 placeholder="Enter your email"
+              />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 mb-2">Phone Number <span className="text-gray-500 text-sm">(Optional if email provided)</span></label>
+              <input
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="input-field"
+                placeholder="Enter your phone number"
               />
             </div>
 

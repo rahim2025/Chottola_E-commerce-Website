@@ -134,7 +134,7 @@ exports.optionalAuth = async (req, res, next) => {
 
 // Verify email requirement
 exports.requireEmailVerification = (req, res, next) => {
-  if (!req.user.verification.email.isVerified) {
+  if (!req.user.emailVerified) {
     return res.status(403).json({
       success: false,
       message: 'Please verify your email address to continue.',

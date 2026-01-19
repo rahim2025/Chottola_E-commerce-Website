@@ -1,25 +1,76 @@
 const cloudinary = require('../config/cloudinary');
 const streamifier = require('streamifier');
+const sharp = require('sharp');
 
-// Upload image to Cloudinary
-exports.uploadToCloudinary = (fileBuffer, folder = 'products') => {
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: `chottola/${folder}`,
-        resource_type: 'auto'
-      },
-      (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result.secure_url);
+// Compress and optimize image
+exports.compressImage = async (fileBuffer, options = {}) => {
+  const {
+    maxWidth = 1920,
+    maxHeight = 1920,
+    quality = 80,
+    format = 'jpeg'
+  } = options;
+
+  try {
+    // Process image with sharp
+    const compressedBuffer = await sharp(fileBuffer)
+      .resize(maxWidth, maxHeight, {
+        fit: 'inside',
+        withoutEnlargement: true
+      })
+      .toFormat(format, {
+        quality,
+        progressive: true,
+        mozjpeg: true // Use mozjpeg for better compression
+      })
+      .toBuffer();
+
+    return compressedBuffer;
+  } catch (error) {
+    console.error('Error compressing image:', error);
+    // Return original buffer if compression fails
+    return fileBuffer;
+  }
+};
+
+// Upload image to Cloudinary (with compression)
+exports.uploadToCloudinary = async (fileBuffer, folder = 'products', compress = true) => {
+  try {
+    let bufferToUpload = fileBuffer;
+
+    // Compress image before uploading if enabled
+    if (compress) {
+      // Different compression settings for different folders
+      const compressionOptions = {
+        products: { maxWidth: 1920, maxHeight: 1920, quality: 85, format: 'jpeg' },
+        avatars: { maxWidth: 500, maxHeight: 500, quality: 80, format: 'jpeg' },
+        thumbnails: { maxWidth: 300, maxHeight: 300, quality: 75, format: 'jpeg' }
+      };
+
+      const options = compressionOptions[folder] || compressionOptions.products;
+      bufferToUpload = await exports.compressImage(fileBuffer, options);
+    }
+
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `chottola/${folder}`,
+          resource_type: 'auto'
+        },
+        (error, result) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(result.secure_url);
+          }
         }
-      }
-    );
+      );
 
-    streamifier.createReadStream(fileBuffer).pipe(uploadStream);
-  });
+      streamifier.createReadStream(bufferToUpload).pipe(uploadStream);
+    });
+  } catch (error) {
+    throw new Error(`Failed to upload image: ${error.message}`);
+  }
 };
 
 // Delete image from Cloudinary

@@ -28,8 +28,8 @@ const userSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: [true, 'Please provide an email'],
     unique: true,
+    sparse: true,
     lowercase: true,
     match: [
       /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
@@ -49,7 +49,8 @@ const userSchema = new mongoose.Schema({
   },
   phone: {
     type: String,
-    default: '',
+    unique: true,
+    sparse: true,
     match: [/^\+?[\d\s\-\(\)]+$/, 'Please provide a valid phone number']
   },
   dateOfBirth: {

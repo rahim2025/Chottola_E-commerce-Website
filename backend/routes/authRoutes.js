@@ -26,31 +26,35 @@ const registerValidation = [
   body('name')
     .trim()
     .isLength({ min: 2, max: 50 })
-    .withMessage('Name must be between 2 and 50 characters')
-    .matches(/^[a-zA-Z\s]+$/)
-    .withMessage('Name can only contain letters and spaces'),
+    .withMessage('Name must be between 2 and 50 characters'),
   body('email')
+    .optional()
     .isEmail()
     .normalizeEmail()
     .withMessage('Please provide a valid email')
     .isLength({ max: 100 })
     .withMessage('Email must be less than 100 characters'),
   body('password')
-    .isLength({ min: 8, max: 128 })
-    .withMessage('Password must be between 8 and 128 characters')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+    .isLength({ min: 6, max: 128 })
+    .withMessage('Password must be at least 6 characters'),
   body('phone')
     .optional()
-    .isMobilePhone('any')
-    .withMessage('Please provide a valid phone number')
+    .trim()
+    .isLength({ min: 10 })
+    .withMessage('Please provide a valid phone number'),
+  body().custom((value, { req }) => {
+    if (!req.body.email && !req.body.phone) {
+      throw new Error('Either email or phone number must be provided');
+    }
+    return true;
+  })
 ];
 
 const loginValidation = [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email'),
+  body('identifier')
+    .trim()
+    .notEmpty()
+    .withMessage('Please provide email or phone number'),
   body('password')
     .notEmpty()
     .withMessage('Password is required')

@@ -1,6 +1,6 @@
 const Product = require('../models/Product');
-const Inventory = require('../models/Inventory');
 const Category = require('../models/Category');
+const Inventory = require('../models/Inventory');
 const { validationResult } = require('express-validator');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/helpers');
 const mongoose = require('mongoose');
@@ -11,6 +11,7 @@ const mongoose = require('mongoose');
 exports.createProduct = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  let committed = false;
   
   try {
     // Validation
@@ -22,29 +23,98 @@ exports.createProduct = async (req, res, next) => {
       });
     }
 
+    // Log raw request body for debugging
+    console.log('=== Raw Request Body ===');
+    console.log('Body keys:', Object.keys(req.body));
+    console.log('pricing:', req.body.pricing);
+    console.log('weight:', req.body.weight);
+    console.log('allergens:', req.body.allergens);
+    console.log('certifications:', req.body.certifications);
+    console.log('ingredients:', req.body.ingredients);
+
+    // Helper function to deeply parse JSON strings
+    const deepParse = (value) => {
+      if (typeof value !== 'string') return value;
+      
+      try {
+        const parsed = JSON.parse(value);
+        // If parsed result is still a string, try parsing again (nested JSON)
+        if (typeof parsed === 'string') {
+          return deepParse(parsed);
+        }
+        // If it's an array, parse each element
+        if (Array.isArray(parsed)) {
+          return parsed.map(item => deepParse(item));
+        }
+        return parsed;
+      } catch (e) {
+        return value;
+      }
+    };
+
+    // Parse JSON strings from FormData
+    const parsedBody = {};
+    for (const key in req.body) {
+      parsedBody[key] = deepParse(req.body[key]);
+    }
+    
+    console.log('=== After Deep Parse ===');
+    console.log('Parsed pricing:', parsedBody.pricing);
+    console.log('Parsed allergens:', parsedBody.allergens);
+    console.log('Parsed certifications:', parsedBody.certifications);
+
     const {
       name,
       description,
       shortDescription,
       category,
       brand,
-      weight,
-      pricing,
+      weight: weightRaw,
+      pricing: pricingRaw,
       nutrition,
       allergens,
-      ingredients,
       certifications,
-      storage,
-      origin,
-      tags,
       isActive,
       isFeatured,
       // Inventory data
-      initialStock,
-      reorderLevel,
-      maxStock,
-      batchInfo
-    } = req.body;
+      initialStock
+    } = parsedBody;
+
+    const weight = typeof weightRaw === 'string' ? deepParse(weightRaw) : (weightRaw || {});
+    const pricing = typeof pricingRaw === 'string' ? deepParse(pricingRaw) : (pricingRaw || {});
+
+    const getNumber = (...vals) => {
+      for (const v of vals) {
+        if (v === undefined || v === null || v === '') continue;
+        const n = Number(v);
+        if (!Number.isNaN(n)) return n;
+      }
+      return undefined;
+    };
+
+    // Validate required fields
+    if (!name || !description || !category) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide name, description, and category'
+      });
+    }
+
+    // Log parsed data for debugging
+    console.log('=== Product Creation Debug ===');
+    console.log('Parsed pricing:', pricing);
+    console.log('Parsed weight:', weight);
+    console.log('Parsed allergens:', allergens);
+    console.log('Parsed certifications:', certifications);
+    console.log('Initial stock:', initialStock);
+
+    // Require at least one image
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload at least one product image'
+      });
+    }
 
     // Check if category exists
     const categoryExists = await Category.findById(category);
@@ -60,105 +130,143 @@ exports.createProduct = async (req, res, next) => {
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         try {
-          const uploadResult = await uploadToCloudinary(file.path, {
-            folder: 'products',
-            width: 800,
-            height: 600,
-            crop: 'fill',
-            quality: 'auto:good'
-          });
+          const imageUrl = await uploadToCloudinary(file.buffer, 'products');
           
           uploadedImages.push({
-            url: uploadResult.secure_url,
-            publicId: uploadResult.public_id,
-            alt: `${name} - Image ${uploadedImages.length + 1}`
+            url: imageUrl,
+            alt: `${name} - Image ${uploadedImages.length + 1}`,
+            isPrimary: uploadedImages.length === 0
           });
         } catch (uploadError) {
           console.error('Image upload error:', uploadError);
-          // Continue with product creation even if some images fail
         }
       }
     }
 
-    // Generate SKU if not provided
-    const sku = `${brand?.toUpperCase().slice(0, 3) || 'PRD'}-${Date.now().toString().slice(-6)}`;
+    // SKU no longer required; leave blank or derive if provided
+    const sku = req.body?.sku || '';
+
+    // Map pricing data to price field with fallbacks to raw body keys
+    const price = getNumber(
+      pricing?.sellingPrice,
+      pricing?.price,
+      req.body?.sellingPrice,
+      req.body?.price,
+      req.body?.['pricing.sellingPrice'],
+      req.body?.['pricing["sellingPrice"]'],
+      req.body?.['pricing["price"]']
+    );
+
+    const discountPrice = getNumber(
+      pricing?.discountPrice,
+      req.body?.discountPrice,
+      req.body?.['pricing.discountPrice'],
+      req.body?.['pricing["discountPrice"]']
+    ) ?? 0;
+
+    if (price === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide selling price'
+      });
+    }
+    
+    // Calculate discount percentage if discount price is provided
+    const discountPercentage = discountPrice > 0 && price > 0 
+      ? Math.round(((price - discountPrice) / price) * 100) 
+      : 0;
+
+    // Helper to ensure array parsing
+    const ensureArray = (value) => {
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'string') {
+        try {
+          const parsed = JSON.parse(value);
+          if (Array.isArray(parsed)) return parsed;
+        } catch (_) {
+          /* fall through */
+        }
+        // fallback: split comma/whitespace for simple strings
+        if (value.includes(',')) {
+          return value.split(',').map(v => v.trim()).filter(Boolean);
+        }
+        return value ? [value] : [];
+      }
+      return [];
+    };
+
+    const allowedAllergens = ['nuts', 'dairy', 'eggs', 'soy', 'wheat', 'fish', 'shellfish', 'sesame', 'gluten'];
+    // Ensure allergens are arrays, map to lowercase, and keep only allowed enums
+    const allergenArray = ensureArray(allergens);
+    const mappedAllergens = allergenArray
+      .map(a => (typeof a === 'string' ? a : String(a)).toLowerCase().trim())
+      .filter(a => allowedAllergens.includes(a));
+      
+    const allowedCertifications = ['organic', 'fair-trade', 'non-gmo', 'halal', 'kosher', 'vegan', 'gluten-free'];
+    // Ensure certifications are arrays, map to lowercase-with-hyphens, keep only allowed enums
+    const certificationArray = ensureArray(certifications);
+    const mappedCertifications = certificationArray
+      .map(c => (typeof c === 'string' ? c : String(c)).toLowerCase().trim().replace(/\s+/g, '-'))
+      .filter(c => allowedCertifications.includes(c));
+
+    // Set default dates
+    const manufactureDate = new Date();
+    const expiryDate = new Date();
+    expiryDate.setFullYear(expiryDate.getFullYear() + 1); // Default 1 year from now
+
+    // Normalize weight unit (frontend may send "pieces" but schema expects "piece")
+    const weightUnit = weight?.unit === 'pieces' ? 'piece' : (weight?.unit || req.body?.['weight.unit'] || 'piece');
+
+    const weightValue = getNumber(weight?.value, req.body?.['weight.value']);
+    if (weightValue === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide weight value'
+      });
+    }
 
     // Create product
     const productData = {
       name,
       description,
-      shortDescription,
+      shortDescription: shortDescription || '',
+      price: price || 0,
+      discountPrice: discountPrice || 0,
+      discountPercentage,
       category,
       brand: brand || 'Unknown',
       weight: {
-        value: weight?.value || 0,
-        unit: weight?.unit || 'g'
+        value: weightValue,
+        unit: weightUnit
       },
-      pricing: {
-        costPrice: pricing?.costPrice || 0,
-        sellingPrice: pricing?.sellingPrice || 0,
-        discountPrice: pricing?.discountPrice || null,
-        currency: pricing?.currency || 'BDT'
-      },
-      nutrition: nutrition || {},
-      allergens: allergens || [],
-      ingredients: ingredients || [],
-      certifications: certifications || [],
-      storage: storage || {},
-      origin: origin || {},
+      expiryDate,
+      manufactureDate,
+      sku,
       images: uploadedImages,
-      tags: tags || [],
+      stock: parseInt(initialStock) || 0,
+      lowStockThreshold: 10,
       isActive: isActive !== undefined ? isActive : true,
       isFeatured: isFeatured || false,
-      sku,
+      allergens: mappedAllergens,
+      certifications: mappedCertifications,
       createdBy: req.user._id
     };
+
+    console.log('=== Final Product Data ===');
+    console.log('Price:', productData.price, typeof productData.price);
+    console.log('Weight:', JSON.stringify(productData.weight));
+    console.log('Allergens:', JSON.stringify(productData.allergens), 'isArray:', Array.isArray(productData.allergens));
+    console.log('Certifications:', JSON.stringify(productData.certifications), 'isArray:', Array.isArray(productData.certifications));
+    console.log('Images:', JSON.stringify(productData.images), 'isArray:', Array.isArray(productData.images));
+    console.log('SKU:', productData.sku);
+    console.log('ManufactureDate:', productData.manufactureDate);
+    console.log('ExpiryDate:', productData.expiryDate);
 
     const product = await Product.create([productData], { session });
     const createdProduct = product[0];
 
-    // Create inventory record
-    const inventoryData = {
-      product: createdProduct._id,
-      sku,
-      stock: {
-        current: initialStock || 0,
-        reorderLevel: reorderLevel || 10,
-        maxStock: maxStock || 1000
-      },
-      pricing: {
-        costPrice: pricing?.costPrice || 0,
-        sellingPrice: pricing?.sellingPrice || 0,
-        currency: pricing?.currency || 'BDT'
-      },
-      supplier: {
-        primary: {
-          name: 'Default Supplier',
-          leadTime: 7,
-          minimumOrder: 1
-        }
-      }
-    };
-
-    // Add batch info if provided
-    if (batchInfo && initialStock > 0) {
-      inventoryData.batches = [{
-        batchNumber: batchInfo.batchNumber || `BATCH-${Date.now()}`,
-        manufactureDate: batchInfo.manufactureDate || new Date(),
-        expiryDate: batchInfo.expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year from now
-        quantity: initialStock,
-        costPrice: pricing?.costPrice || 0,
-        qualityCheck: {
-          passed: true,
-          checkedBy: req.user.name,
-          checkDate: new Date()
-        }
-      }];
-    }
-
-    await Inventory.create([inventoryData], { session });
-
     await session.commitTransaction();
+    committed = true;
     session.endSession();
 
     // Populate and return the created product
@@ -172,20 +280,12 @@ exports.createProduct = async (req, res, next) => {
       data: populatedProduct
     });
   } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    
-    // Clean up uploaded images if product creation failed
-    if (uploadedImages?.length > 0) {
-      for (const image of uploadedImages) {
-        try {
-          await deleteFromCloudinary(image.publicId);
-        } catch (deleteError) {
-          console.error('Failed to delete uploaded image:', deleteError);
-        }
-      }
+    if (!committed) {
+      await session.abortTransaction().catch(() => {});
     }
-    
+    session.endSession();
+
+    console.error('Product creation error:', error);
     next(error);
   }
 };
@@ -637,46 +737,6 @@ exports.getProduct = async (req, res, next) => {
   }
 };
 
-// @desc    Create new product
-// @route   POST /api/products
-// @access  Private/Admin
-exports.createProduct = async (req, res, next) => {
-  try {
-    // Validation
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
-
-    // Handle image uploads
-    let imageUrls = [];
-    if (req.files && req.files.length > 0) {
-      for (const file of req.files) {
-        const imageUrl = await uploadToCloudinary(file.buffer, 'products');
-        imageUrls.push(imageUrl);
-      }
-    }
-
-    const productData = {
-      ...req.body,
-      images: imageUrls
-    };
-
-    const product = await Product.create(productData);
-
-    res.status(201).json({
-      success: true,
-      message: 'Product created successfully',
-      data: product
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
 // @desc    Update product
 // @route   PUT /api/products/:id
 // @access  Private/Admin
@@ -691,30 +751,99 @@ exports.updateProduct = async (req, res, next) => {
       });
     }
 
-    // Handle new image uploads
-    if (req.files && req.files.length > 0) {
-      // Delete old images from cloudinary
-      for (const oldImage of product.images) {
-        await deleteFromCloudinary(oldImage);
+    // Helper function to deeply parse JSON strings
+    const deepParse = (value) => {
+      if (typeof value !== 'string') return value;
+      
+      try {
+        const parsed = JSON.parse(value);
+        if (typeof parsed === 'string') {
+          return deepParse(parsed);
+        }
+        if (Array.isArray(parsed)) {
+          return parsed.map(item => deepParse(item));
+        }
+        return parsed;
+      } catch (e) {
+        return value;
       }
+    };
 
-      // Upload new images
-      let imageUrls = [];
-      for (const file of req.files) {
-        const imageUrl = await uploadToCloudinary(file.buffer, 'products');
-        imageUrls.push(imageUrl);
-      }
-      req.body.images = imageUrls;
+    // Parse JSON strings from FormData
+    const parsedBody = {};
+    for (const key in req.body) {
+      parsedBody[key] = deepParse(req.body[key]);
     }
+
+    const {
+      name,
+      description,
+      shortDescription,
+      category,
+      brand,
+      weight: weightRaw,
+      price,
+      discountPrice,
+      discountPercentage,
+      currency,
+      allergens,
+      certifications,
+      isActive,
+      isFeatured,
+      stock
+    } = parsedBody;
+
+    const weight = typeof weightRaw === 'string' ? deepParse(weightRaw) : (weightRaw || {});
+
+    // Handle new image uploads
+    let updatedImages = product.images;
+    if (req.files && req.files.length > 0) {
+      // Upload new images
+      const uploadedImages = [];
+      for (const file of req.files) {
+        const result = await uploadToCloudinary(file.buffer, 'products');
+        uploadedImages.push({
+          url: result.secure_url,
+          publicId: result.public_id,
+          alt: name || product.name
+        });
+      }
+      updatedImages = uploadedImages;
+    }
+
+    // Prepare update data
+    const updateData = {
+      name: name || product.name,
+      description: description || product.description,
+      shortDescription: shortDescription !== undefined ? shortDescription : product.shortDescription,
+      price: parseFloat(price) || product.price,
+      discountPrice: parseFloat(discountPrice) || 0,
+      discountPercentage: parseFloat(discountPercentage) || 0,
+      currency: currency || product.currency,
+      category: category || product.category,
+      brand: brand || product.brand,
+      weight: {
+        value: parseFloat(weight?.value) || product.weight?.value,
+        unit: weight?.unit || product.weight?.unit
+      },
+      images: updatedImages,
+      stock: parseInt(stock) !== undefined ? parseInt(stock) : product.stock,
+      isActive: isActive !== undefined ? isActive : product.isActive,
+      isFeatured: isFeatured !== undefined ? isFeatured : product.isFeatured,
+      allergens: allergens || product.allergens,
+      certifications: certifications || product.certifications,
+      updatedBy: req.user._id
+    };
 
     product = await Product.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       {
         new: true,
         runValidators: true
       }
-    );
+    ).populate('category', 'name slug')
+     .populate('updatedBy', 'name email');
 
     res.status(200).json({
       success: true,
@@ -722,6 +851,7 @@ exports.updateProduct = async (req, res, next) => {
       data: product
     });
   } catch (error) {
+    console.error('Product update error:', error);
     next(error);
   }
 };
@@ -774,12 +904,12 @@ exports.getAdminProducts = async (req, res, next) => {
     }
 
     // Filter by active status
-    if (req.query.isActive !== undefined) {
+    if (req.query.isActive !== undefined && req.query.isActive !== '') {
       query.isActive = req.query.isActive === 'true';
     }
 
     // Filter by featured status
-    if (req.query.isFeatured !== undefined) {
+    if (req.query.isFeatured !== undefined && req.query.isFeatured !== '') {
       query.isFeatured = req.query.isFeatured === 'true';
     }
 

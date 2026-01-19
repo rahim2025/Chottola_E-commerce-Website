@@ -22,10 +22,10 @@ exports.createRateLimit = (options = {}) => {
   return rateLimit(defaultOptions);
 };
 
-// Strict rate limiting for authentication endpoints
+// Strict rate limiting for authentication endpoints (DISABLED for development)
 exports.authRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 auth requests per windowMs
+  max: 10000, // Very high limit - effectively disabled
   message: {
     success: false,
     message: 'Too many authentication attempts from this IP, please try again in 15 minutes.',
@@ -36,10 +36,10 @@ exports.authRateLimit = rateLimit({
   skipSuccessfulRequests: true // Don't count successful requests
 });
 
-// Password reset rate limiting
+// Password reset rate limiting (DISABLED for development)
 exports.passwordResetRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // limit each IP to 3 password reset requests per hour
+  max: 10000, // Very high limit - effectively disabled
   message: {
     success: false,
     message: 'Too many password reset attempts from this IP, please try again in 1 hour.',
@@ -49,10 +49,10 @@ exports.passwordResetRateLimit = rateLimit({
   legacyHeaders: false
 });
 
-// Registration rate limiting
+// Registration rate limiting (DISABLED for development)
 exports.registrationRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // limit each IP to 3 registrations per hour
+  max: 10000, // Very high limit - effectively disabled
   message: {
     success: false,
     message: 'Too many registration attempts from this IP, please try again in 1 hour.',
@@ -62,10 +62,10 @@ exports.registrationRateLimit = rateLimit({
   legacyHeaders: false
 });
 
-// API rate limiting for authenticated users
+// API rate limiting for authenticated users (DISABLED for development)
 exports.apiRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // limit each IP to 200 API requests per windowMs
+  max: 10000, // Very high limit - effectively disabled
   message: {
     success: false,
     message: 'API rate limit exceeded, please try again later.',
@@ -178,17 +178,16 @@ exports.corsOptions = {
   exposedHeaders: ['RateLimit-Limit', 'RateLimit-Remaining', 'RateLimit-Reset']
 };
 
-// Request logging middleware
+// Request logging middleware (only logs errors)
 exports.requestLogger = (req, res, next) => {
   const start = Date.now();
   
-  // Log request
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl} - IP: ${req.ip} - User-Agent: ${req.get('User-Agent')}`);
-  
-  // Log response time
+  // Log response only for errors (4xx, 5xx status codes)
   res.on('finish', () => {
-    const duration = Date.now() - start;
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms`);
+    if (res.statusCode >= 400) {
+      const duration = Date.now() - start;
+      console.error(`${new Date().toISOString()} - ${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms - IP: ${req.ip}`);
+    }
   });
   
   next();

@@ -2,6 +2,48 @@ const Category = require('../models/Category');
 const { validationResult } = require('express-validator');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/helpers');
 
+// @desc    Get all categories for admin
+// @route   GET /api/categories/admin/all
+// @access  Private/Admin
+exports.getAllForAdmin = async (req, res, next) => {
+  try {
+    const { search, isActive, isFeatured, parent } = req.query;
+    let query = {};
+
+    // Search by name
+    if (search) {
+      query.name = { $regex: search, $options: 'i' };
+    }
+
+    // Filter by active status
+    if (isActive !== undefined && isActive !== '') {
+      query.isActive = isActive === 'true';
+    }
+
+    // Filter by featured status
+    if (isFeatured !== undefined && isFeatured !== '') {
+      query.isFeatured = isFeatured === 'true';
+    }
+
+    // Filter by parent
+    if (parent) {
+      query.parent = parent === 'null' ? null : parent;
+    }
+
+    const categories = await Category.find(query)
+      .populate('parent', 'name')
+      .sort('sortOrder name');
+
+    res.status(200).json({
+      success: true,
+      data: categories,
+      count: categories.length
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Get all categories
 // @route   GET /api/categories
 // @access  Public
@@ -65,7 +107,15 @@ exports.createCategory = async (req, res, next) => {
     // Handle image upload
     if (req.file) {
       const imageUrl = await uploadToCloudinary(req.file.buffer, 'categories');
-      req.body.image = imageUrl;
+      req.body.image = {
+        url: imageUrl,
+        alt: req.body.name || 'Category image'
+      };
+    }
+
+    // Convert empty parent to null
+    if (req.body.parent === '' || req.body.parent === 'null') {
+      req.body.parent = null;
     }
 
     const category = await Category.create(req.body);
@@ -97,11 +147,19 @@ exports.updateCategory = async (req, res, next) => {
     // Handle image upload
     if (req.file) {
       // Delete old image
-      if (category.image) {
-        await deleteFromCloudinary(category.image);
+      if (category.image?.url) {
+        await deleteFromCloudinary(category.image.url);
       }
       const imageUrl = await uploadToCloudinary(req.file.buffer, 'categories');
-      req.body.image = imageUrl;
+      req.body.image = {
+        url: imageUrl,
+        alt: req.body.name || category.name || 'Category image'
+      };
+    }
+
+    // Convert empty parent to null
+    if (req.body.parent === '' || req.body.parent === 'null') {
+      req.body.parent = null;
     }
 
     category = await Category.findByIdAndUpdate(
@@ -138,8 +196,8 @@ exports.deleteCategory = async (req, res, next) => {
     }
 
     // Delete image from cloudinary
-    if (category.image) {
-      await deleteFromCloudinary(category.image);
+    if (category.image?.url) {
+      await deleteFromCloudinary(category.image.url);
     }
 
     await category.deleteOne();
@@ -147,6 +205,87 @@ exports.deleteCategory = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Category deleted successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Bulk update categories
+// @route   PUT /api/categories/bulk-update
+// @access  Private/Admin
+exports.bulkUpdateCategories = async (req, res, next) => {
+  try {
+    const { categoryIds, action } = req.body;
+
+    if (!categoryIds || !Array.isArray(categoryIds) || categoryIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide category IDs'
+      });
+    }
+
+    let updateData = {};
+
+    switch (action) {
+      case 'activate':
+        updateData = { isActive: true };
+        break;
+      case 'deactivate':
+        updateData = { isActive: false };
+        break;
+      case 'feature':
+        updateData = { isFeatured: true };
+        break;
+      case 'unfeature':
+        updateData = { isFeatured: false };
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid action'
+        });
+    }
+
+    const result = await Category.updateMany(
+      { _id: { $in: categoryIds } },
+      { $set: updateData }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully updated ${result.modifiedCount} categories`,
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reorder categories
+// @route   PUT /api/categories/reorder
+// @access  Private/Admin
+exports.reorderCategories = async (req, res, next) => {
+  try {
+    const { categories } = req.body;
+
+    if (!categories || !Array.isArray(categories)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide categories array'
+      });
+    }
+
+    // Update sort order for each category
+    const updatePromises = categories.map((cat, index) =>
+      Category.findByIdAndUpdate(cat.id, { sortOrder: index })
+    );
+
+    await Promise.all(updatePromises);
+
+    res.status(200).json({
+      success: true,
+      message: 'Categories reordered successfully'
     });
   } catch (error) {
     next(error);

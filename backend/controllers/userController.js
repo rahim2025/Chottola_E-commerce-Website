@@ -219,3 +219,113 @@ exports.deleteUser = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Update user role (Super Admin only)
+// @route   PUT /api/users/:id/role
+// @access  Private/Super-Admin
+exports.updateUserRole = async (req, res, next) => {
+  try {
+    const { role } = req.body;
+    
+    if (!['customer', 'moderator', 'admin', 'super-admin'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid role'
+      });
+    }
+
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    user.role = role;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'User role updated successfully',
+      data: user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update user status (Admin only)
+// @route   PUT /api/users/:id/status
+// @access  Private/Admin
+exports.updateUserStatus = async (req, res, next) => {
+  try {
+    const { accountStatus } = req.body;
+    
+    if (!['active', 'inactive', 'suspended', 'pending-verification'].includes(accountStatus)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status'
+      });
+    }
+
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    user.accountStatus = accountStatus;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'User status updated successfully',
+      data: user
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update user (Admin only)
+// @route   PUT /api/users/:id
+// @access  Private/Admin
+exports.updateUser = async (req, res, next) => {
+  try {
+    const { role, accountStatus, permissions } = req.body;
+    
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (role) user.role = role;
+    if (accountStatus) user.accountStatus = accountStatus;
+    
+    if (permissions && (role === 'admin' || role === 'moderator' || role === 'super-admin')) {
+      if (!user.adminData) {
+        user.adminData = {};
+      }
+      user.adminData.permissions = permissions;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'User updated successfully',
+      data: user
+    });
+  } catch (error) {
+    next(error);
+  }
+};

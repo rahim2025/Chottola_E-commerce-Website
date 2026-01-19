@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import ProductCard from '../components/product/ProductCard';
 import { productService } from '../services/productService';
 import { useCart } from '../hooks/useCart';
+import { useAuth } from '../hooks/useAuth';
 import Loader from '../components/common/Loader';
 import { FaShoppingCart, FaLeaf, FaTruck, FaPercent, FaShieldAlt, FaClock } from 'react-icons/fa';
 
@@ -12,6 +13,7 @@ const Home = () => {
   const [regularProducts, setRegularProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
+  const { isAdmin } = useAuth();
 
   useEffect(() => {
     fetchProducts();
@@ -74,9 +76,21 @@ const Home = () => {
                   <FaShoppingCart className="mr-2" />
                   Shop Now
                 </Link>
-                <button className="px-8 py-4 border-2 border-white/30 text-white rounded-xl font-semibold hover:bg-white/10 transition-all">
-                  Browse Categories
-                </button>
+                {isAdmin ? (
+                  <Link
+                    to="/admin/dashboard"
+                    className="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    Admin Dashboard
+                  </Link>
+                ) : (
+                  <button className="px-8 py-4 border-2 border-white/30 text-white rounded-xl font-semibold hover:bg-white/10 transition-all">
+                    Browse Categories
+                  </button>
+                )}
               </div>
             </div>
 

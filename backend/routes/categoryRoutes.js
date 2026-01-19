@@ -5,23 +5,45 @@ const {
   getCategory,
   createCategory,
   updateCategory,
-  deleteCategory
+  deleteCategory,
+  getAllForAdmin,
+  bulkUpdateCategories,
+  reorderCategories
 } = require('../controllers/categoryController');
 const { protect } = require('../middleware/auth');
-const { authorize } = require('../middleware/admin');
+const { requireAdmin, requireAdminPermission } = require('../middleware/admin');
 const upload = require('../middleware/upload');
+const { compressImages } = require('../middleware/upload');
 const { createCategoryValidator, idValidator } = require('../utils/validators');
 
-// Public routes
-router.get('/', getCategories);
-router.get('/:id', getCategory);
+// Admin routes (must come before public routes)
+router.get(
+  '/admin/all',
+  protect,
+  requireAdminPermission('manage-categories'),
+  getAllForAdmin
+);
 
-// Admin routes
+router.put(
+  '/bulk-update',
+  protect,
+  requireAdminPermission('manage-categories'),
+  bulkUpdateCategories
+);
+
+router.put(
+  '/reorder',
+  protect,
+  requireAdminPermission('manage-categories'),
+  reorderCategories
+);
+
 router.post(
   '/',
   protect,
-  authorize('admin'),
+  requireAdminPermission('manage-categories'),
   upload.single('image'),
+  compressImages,
   createCategoryValidator,
   createCategory
 );
@@ -29,8 +51,9 @@ router.post(
 router.put(
   '/:id',
   protect,
-  authorize('admin'),
+  requireAdminPermission('manage-categories'),
   upload.single('image'),
+  compressImages,
   idValidator,
   updateCategory
 );
@@ -38,9 +61,13 @@ router.put(
 router.delete(
   '/:id',
   protect,
-  authorize('admin'),
+  requireAdminPermission('manage-categories'),
   idValidator,
   deleteCategory
 );
+
+// Public routes
+router.get('/', getCategories);
+router.get('/:id', getCategory);
 
 module.exports = router;

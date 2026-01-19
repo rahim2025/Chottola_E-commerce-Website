@@ -17,6 +17,7 @@ const {
 const { protect } = require('../middleware/auth');
 const { requireAdmin, requireAdminPermission } = require('../middleware/admin');
 const upload = require('../middleware/upload');
+const { compressImages } = require('../middleware/upload');
 const { createProductValidator, idValidator } = require('../utils/validators');
 
 // Public routes (must be before parameterized routes)
@@ -45,6 +46,7 @@ router.post(
   protect,
   requireAdminPermission('product_create'),
   upload.array('images', 5),
+  compressImages,
   createProductValidator,
   createProduct
 );
@@ -57,6 +59,7 @@ router.put(
   protect,
   requireAdminPermission('product_update'),
   upload.array('images', 5),
+  compressImages,
   idValidator,
   updateProduct
 );

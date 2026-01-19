@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Loader from '../../components/common/Loader';
 import { useAuth } from '../../hooks/useAuth';
+import api from '../../services/api';
 
 const AdminProducts = () => {
   const { user } = useAuth();
@@ -33,29 +34,22 @@ const AdminProducts = () => {
   const fetchProducts = async (page = 1) => {
     try {
       setLoading(true);
-      const queryParams = new URLSearchParams({
+      const queryParams = {
         page: page.toString(),
         limit: '20',
         ...filters
+      };
+
+      const response = await api.get('/products/admin/all', {
+        params: queryParams
       });
 
-      const response = await fetch(`/api/products/admin/all?${queryParams}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch products');
-      }
-
-      const data = await response.json();
-      setProducts(data.data);
-      setCurrentPage(data.pagination.currentPage);
-      setTotalPages(data.pagination.totalPages);
-      setTotalProducts(data.pagination.totalProducts);
+      setProducts(response.data.data);
+      setCurrentPage(response.data.pagination.currentPage);
+      setTotalPages(response.data.pagination.totalPages);
+      setTotalProducts(response.data.pagination.totalProducts);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || 'Failed to fetch products');
     } finally {
       setLoading(false);
     }
@@ -68,21 +62,11 @@ const AdminProducts = () => {
     }
 
     try {
-      const response = await fetch(`/api/products/${productId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete product');
-      }
-
+      await api.delete(`/products/${productId}`);
       setSuccess('Product deleted successfully');
       fetchProducts(currentPage);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || 'Failed to delete product');
     }
   };
 
@@ -94,29 +78,17 @@ const AdminProducts = () => {
     }
 
     try {
-      const response = await fetch('/api/products/bulk-update', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          productIds: selectedProducts,
-          action
-        })
+      const response = await api.put('/products/bulk-update', {
+        productIds: selectedProducts,
+        action
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to ${action} products`);
-      }
-
-      const data = await response.json();
-      setSuccess(`Successfully ${action}d ${data.data.modifiedCount} products`);
+      setSuccess(`Successfully ${action}d ${response.data.data.modifiedCount} products`);
       setSelectedProducts([]);
       setShowBulkActions(false);
       fetchProducts(currentPage);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || `Failed to ${action} products`);
     }
   };
 
@@ -366,17 +338,17 @@ const AdminProducts = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {product.pricing?.currency} {product.pricing?.sellingPrice}
+                      {product.currency || 'BDT'} {product.discountPrice > 0 ? product.discountPrice.toFixed(2) : product.price.toFixed(2)}
                     </div>
-                    {product.pricing?.discountPrice && (
+                    {product.discountPrice > 0 && (
                       <div className="text-sm text-gray-500 line-through">
-                        {product.pricing?.currency} {product.pricing?.discountPrice}
+                        {product.currency || 'BDT'} {product.price.toFixed(2)}
                       </div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {product.inventory?.stock?.current || 0} units
+                      {product.stock || 0} units
                     </div>
                     {getStockStatusBadge(product.inventory)}
                   </td>
