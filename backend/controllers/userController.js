@@ -63,7 +63,7 @@ exports.getUserById = async (req, res, next) => {
 // @access  Private
 exports.updateProfile = async (req, res, next) => {
   try {
-    const { name, email, phone, address } = req.body;
+    const { name, email, phone, dateOfBirth, gender, preferences } = req.body;
 
     const user = await User.findById(req.user._id);
 
@@ -79,8 +79,16 @@ exports.updateProfile = async (req, res, next) => {
     user.email = email || user.email;
     user.phone = phone || user.phone;
     
-    if (address) {
-      user.address = { ...user.address, ...address };
+    if (dateOfBirth !== undefined) {
+      user.dateOfBirth = dateOfBirth;
+    }
+    
+    if (gender) {
+      user.gender = gender;
+    }
+    
+    if (preferences) {
+      user.preferences = { ...user.preferences, ...preferences };
     }
 
     const updatedUser = await user.save();
@@ -93,7 +101,9 @@ exports.updateProfile = async (req, res, next) => {
         name: updatedUser.name,
         email: updatedUser.email,
         phone: updatedUser.phone,
-        address: updatedUser.address,
+        dateOfBirth: updatedUser.dateOfBirth,
+        gender: updatedUser.gender,
+        preferences: updatedUser.preferences,
         role: updatedUser.role
       }
     });

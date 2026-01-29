@@ -51,16 +51,41 @@ exports.getCategories = async (req, res, next) => {
   try {
     let query = {};
 
-    // Filter by active status
-    if (req.query.isActive !== undefined) {
-      query.isActive = req.query.isActive === 'true';
+    // Filter by active status (default to active only)
+    query.isActive = req.query.isActive !== undefined ? req.query.isActive === 'true' : true;
+
+    // Filter by featured status
+    if (req.query.isFeatured !== undefined) {
+      query.isFeatured = req.query.isFeatured === 'true';
     }
 
-    const categories = await Category.find(query).sort('name');
+    // Filter by parent category
+    if (req.query.parent !== undefined) {
+      if (req.query.parent === 'null' || req.query.parent === '') {
+        query.parent = null;
+      } else {
+        query.parent = req.query.parent;
+      }
+    }
+
+    // Search by name
+    if (req.query.search) {
+      query.name = { $regex: req.query.search, $options: 'i' };
+    }
+
+    let sortBy = 'sortOrder name';
+    if (req.query.sortBy) {
+      sortBy = req.query.sortBy;
+    }
+
+    const categories = await Category.find(query)
+      .populate('parent', 'name slug')
+      .sort(sortBy);
 
     res.status(200).json({
       success: true,
-      data: categories
+      data: categories,
+      count: categories.length
     });
   } catch (error) {
     next(error);

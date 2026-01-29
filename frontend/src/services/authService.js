@@ -13,12 +13,20 @@ export const authService = {
 
   // Login user
   login: async (credentials) => {
-    const response = await api.post('/auth/login', credentials);
-    if (response.data.success && response.data.data.accessToken) {
-      localStorage.setItem('token', response.data.data.accessToken);
-      localStorage.setItem('user', JSON.stringify(response.data.data.user));
+    try {
+      const response = await api.post('/auth/login', credentials);
+      if (response.data.success && response.data.data.accessToken) {
+        localStorage.setItem('token', response.data.data.accessToken);
+        localStorage.setItem('user', JSON.stringify(response.data.data.user));
+      }
+      return response.data;
+    } catch (error) {
+      // Log error for debugging
+      console.error('AuthService login error:', error);
+      
+      // Re-throw the error so it can be handled by the calling component
+      throw error;
     }
-    return response.data;
   },
 
   // Logout user

@@ -27,6 +27,11 @@ export const useAuthStore = create(
         try {
           set({ loading: true });
           const data = await authService.login(credentials);
+          
+          if (!data.success) {
+            throw new Error(data.message || 'Login failed');
+          }
+          
           const user = data.data.user;
           
           set({
@@ -44,6 +49,7 @@ export const useAuthStore = create(
           return data;
         } catch (error) {
           set({ loading: false });
+          console.error('Auth store login error:', error);
           throw error;
         }
       },

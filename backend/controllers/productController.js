@@ -320,7 +320,30 @@ exports.getProducts = async (req, res, next) => {
         : req.query.category.split(',');
       
       if (categories.length > 0) {
-        matchQuery.category = { $in: categories.map(cat => mongoose.Types.ObjectId(cat)) };
+        // Check if categories are ObjectIds or names/slugs
+        const categoryIds = [];
+        
+        for (const cat of categories) {
+          // Check if it's a valid ObjectId
+          if (mongoose.Types.ObjectId.isValid(cat) && cat.length === 24) {
+            categoryIds.push(new mongoose.Types.ObjectId(cat));
+          } else {
+            // It's a category name or slug, look up the ObjectId
+            const categoryDoc = await Category.findOne({
+              $or: [
+                { name: { $regex: new RegExp(`^${cat}$`, 'i') } },
+                { slug: cat.toLowerCase() }
+              ]
+            });
+            if (categoryDoc) {
+              categoryIds.push(categoryDoc._id);
+            }
+          }
+        }
+        
+        if (categoryIds.length > 0) {
+          matchQuery.category = { $in: categoryIds };
+        }
       }
     }
 

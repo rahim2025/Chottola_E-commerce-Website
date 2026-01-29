@@ -126,6 +126,7 @@ exports.login = async (req, res, next) => {
     const user = await User.findOne(query).select('+password');
     
     if (!user) {
+      console.log(`Login attempt failed: User not found for ${loginIdentifier}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -134,6 +135,7 @@ exports.login = async (req, res, next) => {
 
     // Check if account is active
     if (user.accountStatus !== 'active') {
+      console.log(`Login attempt failed: Account inactive for ${loginIdentifier}`);
       return res.status(401).json({
         success: false,
         message: 'Account is suspended or deactivated. Please contact support.'
@@ -144,6 +146,7 @@ exports.login = async (req, res, next) => {
     const isPasswordMatch = await user.comparePassword(password);
     
     if (!isPasswordMatch) {
+      console.log(`Login attempt failed: Wrong password for ${loginIdentifier}`);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'

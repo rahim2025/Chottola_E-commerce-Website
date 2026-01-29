@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import ProductCard from '../components/product/ProductCard';
 import ProductFilters from '../components/product/ProductFilters';
 import { productService } from '../services/productService';
+import { categoryService } from '../services/categoryService';
 import { useCart } from '../hooks/useCart';
 import Loader from '../components/common/Loader';
 
@@ -49,13 +50,40 @@ const Products = () => {
   useEffect(() => {
     const fetchFilterOptions = async () => {
       try {
-        const response = await fetch('/api/products/filters');
-        const data = await response.json();
-        if (data.success) {
-          setFilterOptions(data.data);
+        // Fetch categories from categoryService
+        const categoriesResponse = await categoryService.getCategories({ isActive: true });
+        
+        // Transform categories for filter options
+        const categories = categoriesResponse.success ? 
+          categoriesResponse.data.map(cat => ({
+            id: cat.slug || cat._id,
+            name: cat.name,
+            productCount: cat.stats?.productCount || 0
+          })) : [];
+
+        // Try to fetch other filter options from products API
+        let brands = [];
+        try {
+          const response = await fetch('/api/products/filters');
+          const data = await response.json();
+          if (data.success) {
+            brands = data.data.brands || [];
+          }
+        } catch (error) {
+          console.log('Products filter endpoint not available, using categories only');
         }
+
+        setFilterOptions({ 
+          categories,
+          brands 
+        });
       } catch (error) {
         console.error('Failed to fetch filter options:', error);
+        // Set empty filter options as fallback
+        setFilterOptions({ 
+          categories: [],
+          brands: []
+        });
       }
     };
 

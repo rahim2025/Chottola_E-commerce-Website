@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import ProductCard from '../components/product/ProductCard';
 import { productService } from '../services/productService';
+import { categoryService } from '../services/categoryService';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
 import Loader from '../components/common/Loader';
@@ -11,12 +12,15 @@ import { FaShoppingCart, FaLeaf, FaTruck, FaPercent, FaShieldAlt, FaClock } from
 const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [regularProducts, setRegularProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
   const { addToCart } = useCart();
   const { isAdmin } = useAuth();
 
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
   }, []);
 
   const fetchProducts = async () => {
@@ -32,6 +36,72 @@ const Home = () => {
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      setCategoriesLoading(true);
+      const response = await categoryService.getMainCategories();
+      if (response.success) {
+        // Filter to show only first 6 categories for the homepage
+        setCategories(response.data.slice(0, 6));
+      }
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      // Fallback to default categories if API fails
+      setCategories([
+        { 
+          _id: '1', 
+          name: 'Fresh Produce', 
+          slug: 'fresh-produce', 
+          icon: '🥬', 
+          color: '#22c55e',
+          image: { url: '' }
+        },
+        { 
+          _id: '2', 
+          name: 'Dairy & Eggs', 
+          slug: 'dairy-eggs', 
+          icon: '🥛', 
+          color: '#f59e0b',
+          image: { url: '' }
+        },
+        { 
+          _id: '3', 
+          name: 'Bakery', 
+          slug: 'bakery', 
+          icon: '🍞', 
+          color: '#22c55e',
+          image: { url: '' }
+        },
+        { 
+          _id: '4', 
+          name: 'Meat & Seafood', 
+          slug: 'meat-seafood', 
+          icon: '🥩', 
+          color: '#f59e0b',
+          image: { url: '' }
+        },
+        { 
+          _id: '5', 
+          name: 'Snacks & Beverages', 
+          slug: 'snacks-beverages', 
+          icon: '🥤', 
+          color: '#22c55e',
+          image: { url: '' }
+        },
+        { 
+          _id: '6', 
+          name: 'Personal Care', 
+          slug: 'personal-care', 
+          icon: '🧴', 
+          color: '#f59e0b',
+          image: { url: '' }
+        }
+      ]);
+    } finally {
+      setCategoriesLoading(false);
     }
   };
 
@@ -173,29 +243,80 @@ const Home = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
-            {[
-              { name: 'Fresh Produce', icon: '🥬', color: 'primary', category: 'produce' },
-              { name: 'Dairy & Eggs', icon: '🥛', color: 'accent', category: 'dairy' },
-              { name: 'Bakery', icon: '🍞', color: 'primary', category: 'bakery' },
-              { name: 'Meat & Seafood', icon: '🥩', color: 'accent', category: 'meat' },
-              { name: 'Snacks & Beverages', icon: '🥤', color: 'primary', category: 'snacks' },
-              { name: 'Personal Care', icon: '🧴', color: 'accent', category: 'care' }
-            ].map((category, index) => (
-              <Link
-                key={index}
-                to={`/products?category=${category.category}`}
-                className="group bg-background-secondary rounded-2xl p-6 text-center shadow-sm border border-gray-100 hover:shadow-lg hover:border-primary-200 transition-all duration-300"
-              >
-                <div className={`w-16 h-16 mx-auto mb-4 bg-${category.color}-100 rounded-xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform duration-300`}>
-                  {category.icon}
+          {categoriesLoading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
+              {[...Array(6)].map((_, index) => (
+                <div key={index} className="bg-background-secondary rounded-2xl p-6 text-center shadow-sm border border-gray-100 animate-pulse">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-xl"></div>
+                  <div className="h-4 bg-gray-200 rounded mx-auto w-24"></div>
                 </div>
-                <h3 className="font-semibold text-text-primary group-hover:text-primary-600 transition-colors">
-                  {category.name}
-                </h3>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
+              {categories.map((category, index) => {
+                // Helper function to get color class
+                const getColorClass = (color, index) => {
+                  if (color && color.startsWith('#')) {
+                    return index % 2 === 0 ? 'primary' : 'accent';
+                  }
+                  return index % 2 === 0 ? 'primary' : 'accent';
+                };
+
+                const colorClass = getColorClass(category.color, index);
+                
+                return (
+                  <Link
+                    key={category._id}
+                    to={`/products?category=${category.slug || category._id}`}
+                    className="group bg-background-secondary rounded-2xl p-6 text-center shadow-sm border border-gray-100 hover:shadow-lg hover:border-primary-200 transition-all duration-300"
+                  >
+                    <div className={`w-16 h-16 mx-auto mb-4 bg-${colorClass}-100 rounded-xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform duration-300 overflow-hidden`}>
+                      {category.image?.url ? (
+                        <img 
+                          src={category.image.url} 
+                          alt={category.image.alt || category.name}
+                          className="w-full h-full object-cover rounded-xl"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'block';
+                          }}
+                        />
+                      ) : null}
+                      <span 
+                        className={`${category.image?.url ? 'hidden' : 'block'}`}
+                        style={{ display: category.image?.url ? 'none' : 'block' }}
+                      >
+                        {category.icon || '📦'}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-text-primary group-hover:text-primary-600 transition-colors">
+                      {category.name}
+                    </h3>
+                    {category.stats?.productCount > 0 && (
+                      <p className="text-sm text-text-muted mt-1">
+                        {category.stats.productCount} items
+                      </p>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+          
+          {!categoriesLoading && categories.length > 0 && (
+            <div className="text-center mt-8">
+              <Link 
+                to="/products" 
+                className="btn-secondary inline-flex items-center space-x-2"
+              >
+                <span>View All Categories</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
               </Link>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       </section>
 

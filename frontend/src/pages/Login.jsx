@@ -9,6 +9,7 @@ const Login = () => {
     password: ''
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -18,10 +19,25 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
+    // Clear error when user starts typing
+    if (error) {
+      setError('');
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Clear previous error
+    setError('');
+    
+    // Basic validation
+    if (!formData.identifier.trim() || !formData.password.trim()) {
+      const errorMsg = 'Please fill in all fields';
+      setError(errorMsg);
+      toast.error(errorMsg);
+      return;
+    }
     
     try {
       setLoading(true);
@@ -29,7 +45,28 @@ const Login = () => {
       toast.success('Login successful!');
       navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Login failed');
+      console.error('Login error:', error);
+      
+      let errorMessage = 'An unexpected error occurred. Please try again.';
+      
+      // Handle different error scenarios
+      if (error.response) {
+        // Server responded with error status
+        const message = error.response.data?.message;
+        if (error.response.status === 401) {
+          errorMessage = message || 'Invalid email/phone or password';
+        } else if (error.response.status === 400) {
+          errorMessage = message || 'Please check your input';
+        } else {
+          errorMessage = message || 'Login failed. Please try again.';
+        }
+      } else if (error.request) {
+        // Network error
+        errorMessage = 'Network error. Please check your connection.';
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -41,6 +78,17 @@ const Login = () => {
         <div className="bg-white rounded-lg shadow-md p-8">
           <h2 className="text-3xl font-bold text-center mb-8">Login</h2>
           
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <span>{error}</span>
+              </div>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="block text-gray-700 mb-2">Email or Phone Number</label>
@@ -50,7 +98,7 @@ const Login = () => {
                 value={formData.identifier}
                 onChange={handleChange}
                 required
-                className="input-field"
+                className={`input-field ${error ? 'border-red-500 focus:border-red-500' : ''}`}
                 placeholder="Enter your email or phone number"
               />
             </div>
@@ -63,7 +111,7 @@ const Login = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="input-field"
+                className={`input-field ${error ? 'border-red-500 focus:border-red-500' : ''}`}
                 placeholder="Enter your password"
               />
             </div>
