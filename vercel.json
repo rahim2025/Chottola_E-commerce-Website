@@ -1,5 +1,6 @@
 {
   "version": 2,
+  "name": "chottola-frontend",
   "builds": [
     {
       "src": "frontend/package.json",
@@ -14,8 +15,14 @@
       "handle": "filesystem"
     },
     {
-      "src": "/.*",
-      "dest": "/index.html"
+      "src": "/(.*)",
+      "dest": "/frontend/dist/index.html"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
