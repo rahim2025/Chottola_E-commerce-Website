@@ -145,7 +145,10 @@ exports.corsOptions = {
       'http://localhost:3000',
       'http://localhost:5173',
       'http://127.0.0.1:3000',
-      'http://127.0.0.1:5173'
+      'http://127.0.0.1:5173',
+      // Production Vercel domains
+      'https://chottola-e-commerce-website-fronten.vercel.app',
+      'https://chottola-e-commerce-website-git-613bf5-mohammad-rahims-projects.vercel.app'
     ];
     
     // Add production domains from environment
@@ -157,12 +160,18 @@ exports.corsOptions = {
       allowedOrigins.push(process.env.ADMIN_URL);
     }
     
+    // Allow any vercel app subdomain in production
+    if (origin && origin.includes('.vercel.app')) {
+      return callback(null, true);
+    }
+    
     // Allow requests with no origin (mobile apps, etc.)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.log('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
