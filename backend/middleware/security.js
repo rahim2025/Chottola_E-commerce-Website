@@ -146,11 +146,10 @@ exports.corsOptions = {
       'http://localhost:5173',
       'http://127.0.0.1:3000',
       'http://127.0.0.1:5173',
-      // Production Vercel domains
-      'https://chottola-e-commerce-website-fronten.vercel.app/',
-      'chottola-e-commerce-website-fronten.vercel.app/',
-      'https://chottola-e-commerce-website-git-80dc08-mohammad-rahims-projects.vercel.app/'
-      'https://chottola-e-commerce-website-frontend-jqhnq5iq6.vercel.app/',
+      // Production Vercel domains (no trailing slash)
+      'https://chottola-e-commerce-website-fronten.vercel.app',
+      'https://chottola-e-commerce-website-git-80dc08-mohammad-rahims-projects.vercel.app',
+      'https://chottola-e-commerce-website-frontend-jqhnq5iq6.vercel.app'
     ];
     
     // Add production domains from environment
