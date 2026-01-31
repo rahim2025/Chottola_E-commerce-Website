@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = "https://chottola-e-commerce-website-git-613bf5-mohammad-rahims-projects.vercel.app/api" || 'http://localhost:5000/api';
+const API_URL = "https://chottola-e-commerce-website-git-613bf5-mohammad-rahims-projects.vercel.app/api" ||'https://chottola-e-commerce-website-backend.vercel.app/api'|| 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: "https://chottola-e-commerce-website-git-613bf5-mohammad-rahims-projects.vercel.app/api",
