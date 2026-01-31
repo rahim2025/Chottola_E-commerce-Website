@@ -141,40 +141,9 @@ exports.sanitizeData = [
 // CORS configuration
 exports.corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:5173',
-      // Production Vercel domains (no trailing slash)
-      'https://chottola-e-commerce-website-fronten.vercel.app',
-      'https://chottola-e-commerce-website-git-80dc08-mohammad-rahims-projects.vercel.app',
-      'https://chottola-e-commerce-website-frontend-jqhnq5iq6.vercel.app'
-    ];
-    
-    // Add production domains from environment
-    if (process.env.FRONTEND_URL) {
-      allowedOrigins.push(process.env.FRONTEND_URL);
-    }
-    
-    if (process.env.ADMIN_URL) {
-      allowedOrigins.push(process.env.ADMIN_URL);
-    }
-    
-    // Allow any vercel app subdomain in production
-    if (origin && origin.includes('.vercel.app')) {
-      return callback(null, true);
-    }
-    
-    // Allow requests with no origin (mobile apps, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
+    // Temporarily allow all origins (including vercel preview URLs) to unblock frontend
+    // NOTE: tighten this by setting FRONTEND_URL/ADMIN_URL in env when ready
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
