@@ -159,6 +159,15 @@ const Navbar = () => {
               >
                 Products
               </Link>
+              {isAdmin && (
+                <Link 
+                  to="/admin/dashboard" 
+                  className="text-purple-600 hover:text-purple-700 transition-colors duration-300 font-semibold py-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              )}
               {isAuthenticated ? (
                 <>
                   <Link 
