@@ -171,7 +171,28 @@ const AddProduct = () => {
       }, 2000);
 
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to create product');
+      console.error('Product creation error:', err);
+      
+      // Extract the most detailed error message available
+      let errorMessage = 'Failed to create product';
+      
+      if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      // If it's a validation error with multiple messages
+      if (err.response?.data?.errors && Array.isArray(err.response.data.errors)) {
+        errorMessage = err.response.data.errors.map(e => e.msg || e.message).join('. ');
+      }
+      
+      setError(errorMessage);
+      
+      // Scroll to top to show error
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
     }
@@ -190,9 +211,26 @@ const AddProduct = () => {
 
         {/* Alerts */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-            {error}
-            <button onClick={() => setError('')} className="float-right text-red-500 hover:text-red-700">×</button>
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded shadow-sm">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-sm font-medium text-red-800">Error creating product</h3>
+                <div className="mt-2 text-sm text-red-700">
+                  {error}
+                </div>
+              </div>
+              <button 
+                onClick={() => setError('')} 
+                className="flex-shrink-0 ml-3 text-red-500 hover:text-red-700 focus:outline-none"
+              >
+                <span className="text-2xl">&times;</span>
+              </button>
+            </div>
           </div>
         )}
         

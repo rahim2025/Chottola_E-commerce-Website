@@ -143,15 +143,6 @@ exports.createProduct = async (req, res, next) => {
       }
     }
 
-    // Generate unique SKU if not provided
-    const generateSKU = () => {
-      const timestamp = Date.now().toString(36).toUpperCase();
-      const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
-      return `SKU-${timestamp}-${randomStr}`;
-    };
-    
-    const sku = req.body?.sku && req.body.sku.trim() !== '' ? req.body.sku.trim() : generateSKU();
-
     // Map pricing data to price field with fallbacks to raw body keys
     const price = getNumber(
       pricing?.sellingPrice,
@@ -247,7 +238,6 @@ exports.createProduct = async (req, res, next) => {
       },
       expiryDate,
       manufactureDate,
-      sku,
       images: uploadedImages,
       stock: parseInt(initialStock) || 0,
       lowStockThreshold: 10,
@@ -264,7 +254,6 @@ exports.createProduct = async (req, res, next) => {
     console.log('Allergens:', JSON.stringify(productData.allergens), 'isArray:', Array.isArray(productData.allergens));
     console.log('Certifications:', JSON.stringify(productData.certifications), 'isArray:', Array.isArray(productData.certifications));
     console.log('Images:', JSON.stringify(productData.images), 'isArray:', Array.isArray(productData.images));
-    console.log('SKU:', productData.sku);
     console.log('ManufactureDate:', productData.manufactureDate);
     console.log('ExpiryDate:', productData.expiryDate);
 

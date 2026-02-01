@@ -62,11 +62,6 @@ const productSchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Please provide manufacture date']
   },
-  sku: {
-    type: String,
-    unique: true,
-    sparse: true
-  },
   images: [{
     url: {
       type: String,

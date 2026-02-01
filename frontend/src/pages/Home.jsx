@@ -195,41 +195,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Service Features */}
-      <section className="py-8 bg-background-secondary border-b border-gray-100">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div className="flex flex-col items-center space-y-3 p-4">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                <FaTruck className="text-primary-600 text-xl" />
-              </div>
-              <span className="font-semibold text-text-primary text-sm">Free Delivery</span>
-              <span className="text-xs text-text-muted">On orders over ৳500</span>
-            </div>
-            <div className="flex flex-col items-center space-y-3 p-4">
-              <div className="w-12 h-12 bg-accent-100 rounded-full flex items-center justify-center">
-                <FaLeaf className="text-accent-600 text-xl" />
-              </div>
-              <span className="font-semibold text-text-primary text-sm">Fresh & Organic</span>
-              <span className="text-xs text-text-muted">Farm to table quality</span>
-            </div>
-            <div className="flex flex-col items-center space-y-3 p-4">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                <FaClock className="text-primary-600 text-xl" />
-              </div>
-              <span className="font-semibold text-text-primary text-sm">Quick Delivery</span>
-              <span className="text-xs text-text-muted">30 min to 2 hours</span>
-            </div>
-            <div className="flex flex-col items-center space-y-3 p-4">
-              <div className="w-12 h-12 bg-accent-100 rounded-full flex items-center justify-center">
-                <FaShieldAlt className="text-accent-600 text-xl" />
-              </div>
-              <span className="font-semibold text-text-primary text-sm">Quality Guarantee</span>
-              <span className="text-xs text-text-muted">100% satisfaction</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      
 
       {/* Categories Section */}
       <section className="py-12 bg-background-secondary">
