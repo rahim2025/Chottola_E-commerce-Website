@@ -159,7 +159,42 @@ const Navbar = () => {
               >
                 Products
               </Link>
-              {!isAuthenticated && (
+              {isAuthenticated ? (
+                <>
+                  <Link 
+                    to="/profile" 
+                    className="text-gray-700 hover:text-primary-600 transition-colors duration-300 font-medium py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Profile
+                  </Link>
+                  <Link 
+                    to="/orders" 
+                    className="text-gray-700 hover:text-primary-600 transition-colors duration-300 font-medium py-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    My Orders
+                  </Link>
+                  {isAdmin && (
+                    <Link 
+                      to="/admin/dashboard" 
+                      className="bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 transition-all duration-300 font-semibold py-3 px-4 rounded-lg shadow-md"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      🎛️ Admin Dashboard
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsMenuOpen(false);
+                    }}
+                    className="text-left text-red-600 hover:text-red-700 transition-colors duration-300 font-medium py-2"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
                 <>
                   <Link 
                     to="/login" 
@@ -176,15 +211,6 @@ const Navbar = () => {
                     Sign Up
                   </Link>
                 </>
-              )}
-              {isAdmin && (
-                <Link 
-                  to="/admin/dashboard" 
-                  className="text-gray-700 hover:text-primary-600 transition-colors duration-300 font-medium py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Admin Dashboard
-                </Link>
               )}
             </div>
           </div>

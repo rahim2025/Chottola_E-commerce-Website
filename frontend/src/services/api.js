@@ -1,11 +1,15 @@
 import axios from 'axios';
 
-const API_URL = "https://chottola-e-commerce-website-git-613bf5-mohammad-rahims-projects.vercel.app/api" ||'https://chottola-e-commerce-website-backend.vercel.app/api'|| 'http://localhost:5000/api';
+// Use environment variable or fallback to production URL
+const API_URL = import.meta.env.VITE_API_URL || 
+  'https://chottola-e-commerce-website-git-613bf5-mohammad-rahims-projects.vercel.app/api';
 
 const api = axios.create({
-  baseURL: "https://chottola-e-commerce-website-backend.vercel.app/api",
+  baseURL: API_URL,
+  withCredentials: true, // Important for CORS with credentials
   headers: {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
   }
 });
 
