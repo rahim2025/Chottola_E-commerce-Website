@@ -383,6 +383,11 @@ exports.getProducts = async (req, res, next) => {
       matchQuery.isFeatured = true;
     }
 
+    // Filter by products with discounts (special offers)
+    if (req.query.hasDiscount === 'true') {
+      matchQuery.discountPrice = { $gt: 0 };
+    }
+
     // Rating filter
     if (req.query.minRating) {
       matchQuery.averageRating = { $gte: parseFloat(req.query.minRating) };

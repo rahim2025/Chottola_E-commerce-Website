@@ -12,6 +12,7 @@ import { FaShoppingCart, FaLeaf, FaTruck, FaPercent, FaShieldAlt, FaClock } from
 const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [regularProducts, setRegularProducts] = useState([]);
+  const [specialOffers, setSpecialOffers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
@@ -25,13 +26,16 @@ const Home = () => {
 
   const fetchProducts = async () => {
     try {
-      const [featuredResponse, regularResponse] = await Promise.all([
+      const [featuredResponse, regularResponse, specialOffersResponse] = await Promise.all([
         productService.getFeaturedProducts(),
-        productService.getProducts({ limit: 12, featured: false })
+        productService.getProducts({ limit: 12, featured: false }),
+        // Fetch products with discounts for special offers
+        productService.getProducts({ limit: 8, hasDiscount: true })
       ]);
       
       setFeaturedProducts(featuredResponse.data);
       setRegularProducts(regularResponse.data);
+      setSpecialOffers(specialOffersResponse.data);
     } catch (error) {
       toast.error('Failed to load products');
     } finally {
@@ -359,7 +363,7 @@ const Home = () => {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {regularProducts.slice(2, 8).map((product) => (
+            {(specialOffers.length > 0 ? specialOffers : regularProducts.slice(2, 8)).map((product) => (
               <div key={product._id} className="bg-background-secondary rounded-xl p-4 text-center relative shadow-lg">
                 <div className="absolute -top-3 -right-3 bg-danger-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                   DEAL
@@ -396,34 +400,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Newsletter */}
-      <section className="py-12 bg-primary-50">
-        <div className="container mx-auto px-4 text-center">
-          <div className="max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold font-heading text-text-primary mb-4">
-              📧 Stay Fresh with Our Newsletter
-            </h2>
-            <p className="text-text-muted text-lg mb-8">
-              Get exclusive deals, fresh product updates, and healthy recipes delivered to your inbox
-            </p>
-            
-            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-              <input
-                type="email"
-                placeholder="Enter your email address"
-                className="flex-1 px-6 py-4 rounded-xl border border-gray-200 text-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              />
-              <button className="bg-primary-500 hover:bg-primary-600 text-white px-8 py-4 rounded-xl font-bold transition-colors">
-                Subscribe
-              </button>
-            </div>
-            
-            <p className="text-xs text-text-muted mt-4">
-              No spam, unsubscribe anytime. We respect your privacy.
-            </p>
-          </div>
-        </div>
-      </section>
+      
     </div>
   );
 };
