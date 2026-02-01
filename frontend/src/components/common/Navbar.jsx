@@ -159,17 +159,18 @@ const Navbar = () => {
               >
                 Products
               </Link>
-              {isAdmin && (
-                <Link 
-                  to="/admin/dashboard" 
-                  className="text-purple-600 hover:text-purple-700 transition-colors duration-300 font-semibold py-2"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Admin
-                </Link>
-              )}
               {isAuthenticated ? (
                 <>
+                  {isAdmin && (
+                    <Link 
+                      to="/admin/dashboard" 
+                      className="bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 transition-all duration-300 font-semibold py-3 px-4 rounded-lg shadow-md flex items-center justify-center space-x-2"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      <span>🎛️</span>
+                      <span>Admin Dashboard</span>
+                    </Link>
+                  )}
                   <Link 
                     to="/profile" 
                     className="text-gray-700 hover:text-primary-600 transition-colors duration-300 font-medium py-2"
@@ -184,15 +185,6 @@ const Navbar = () => {
                   >
                     My Orders
                   </Link>
-                  {isAdmin && (
-                    <Link 
-                      to="/admin/dashboard" 
-                      className="bg-gradient-to-r from-purple-500 to-purple-600 text-white hover:from-purple-600 hover:to-purple-700 transition-all duration-300 font-semibold py-3 px-4 rounded-lg shadow-md"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      🎛️ Admin Dashboard
-                    </Link>
-                  )}
                   <button
                     onClick={() => {
                       logout();
