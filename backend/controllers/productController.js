@@ -143,8 +143,14 @@ exports.createProduct = async (req, res, next) => {
       }
     }
 
-    // SKU no longer required; leave blank or derive if provided
-    const sku = req.body?.sku || '';
+    // Generate unique SKU if not provided
+    const generateSKU = () => {
+      const timestamp = Date.now().toString(36).toUpperCase();
+      const randomStr = Math.random().toString(36).substring(2, 7).toUpperCase();
+      return `SKU-${timestamp}-${randomStr}`;
+    };
+    
+    const sku = req.body?.sku && req.body.sku.trim() !== '' ? req.body.sku.trim() : generateSKU();
 
     // Map pricing data to price field with fallbacks to raw body keys
     const price = getNumber(
