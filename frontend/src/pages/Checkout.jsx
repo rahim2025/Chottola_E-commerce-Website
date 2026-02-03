@@ -41,7 +41,19 @@ const Checkout = () => {
   // Calculate order summary
   useEffect(() => {
     const subtotal = cartTotal;
-    const deliveryFee = subtotal > 1000 ? 0 : 60;
+    const city = formData.shippingAddress.city.toLowerCase();
+    const division = formData.shippingAddress.division;
+    
+    // Calculate delivery fee based on location
+    let deliveryFee;
+    if (city === 'uttara' || city.includes('uttara')) {
+      deliveryFee = 0; // Free delivery for Uttara
+    } else if (division === 'Dhaka') {
+      deliveryFee = 60; // Inside Dhaka
+    } else {
+      deliveryFee = 120; // Outside Dhaka
+    }
+    
     const total = subtotal + deliveryFee;
 
     setOrderSummary({
@@ -49,7 +61,7 @@ const Checkout = () => {
       deliveryFee,
       total
     });
-  }, [cartTotal]);
+  }, [cartTotal, formData.shippingAddress.city, formData.shippingAddress.division]);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -386,6 +398,16 @@ const Checkout = () => {
                         `৳${orderSummary.deliveryFee.toFixed(2)}`
                       )}
                     </span>
+                  </div>
+                  
+                  {/* Delivery Info */}
+                  <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+                    <div className="font-medium text-blue-900 mb-1">📦 Delivery Charges:</div>
+                    <ul className="space-y-1 ml-4">
+                      <li>• Inside Dhaka: ৳60</li>
+                      <li className="text-green-600 font-medium">• Uttara: Free Delivery!</li>
+                      <li>• Outside Dhaka: ৳120</li>
+                    </ul>
                   </div>
                   
                   <div className="border-t pt-3">

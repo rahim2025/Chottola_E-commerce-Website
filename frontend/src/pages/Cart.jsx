@@ -10,7 +10,7 @@ const Cart = () => {
     cartItems, 
     cartLoading,
     removeFromCart, 
-    updateQuantity, 
+    updateCartItem, 
     getCartTotal, 
     clearCart,
     cartTotal,
@@ -21,7 +21,7 @@ const Cart = () => {
   const handleUpdateQuantity = async (productId, currentQuantity, change) => {
     const newQuantity = currentQuantity + change;
     if (newQuantity > 0) {
-      await updateQuantity(productId, newQuantity);
+      await updateCartItem(productId, newQuantity);
     }
   };
 
@@ -56,8 +56,8 @@ const Cart = () => {
     );
   }
 
-  // Calculate delivery fee
-  const deliveryFee = cartTotal > 1000 ? 0 : 60;
+  // Calculate delivery fee - static for cart, dynamic in checkout
+  const deliveryFee = 60; // Default Dhaka rate, actual rate calculated at checkout
   const finalTotal = cartTotal + deliveryFee;
 
   return (
@@ -85,9 +85,9 @@ const Cart = () => {
 
               <div className="divide-y divide-gray-200">
                 {cartItems.map((item) => {
-                  const price = item.pricing?.discountPrice || item.pricing?.sellingPrice || item.price || 0;
-                  const originalPrice = item.pricing?.sellingPrice || item.price || 0;
-                  const hasDiscount = item.pricing?.discountPrice && item.pricing.discountPrice < originalPrice;
+                  const price = item.discountPrice > 0 ? item.discountPrice : item.price || 0;
+                  const originalPrice = item.price || 0;
+                  const hasDiscount = item.discountPrice > 0 && item.discountPrice < originalPrice;
                   
                   return (
                     <div key={item._id} className="p-6">
@@ -179,26 +179,19 @@ const Cart = () => {
                   
                   <div className="flex justify-between text-gray-600">
                     <span>Delivery Fee</span>
-                    <span>
-                      {deliveryFee === 0 ? (
-                        <span className="text-green-600 font-medium">Free</span>
-                      ) : (
-                        `৳${deliveryFee.toFixed(2)}`
-                      )}
-                    </span>
+                    <span>৳{deliveryFee.toFixed(2)}</span>
                   </div>
 
-                  {cartTotal > 1000 && (
-                    <div className="text-sm text-green-600 font-medium">
-                      🎉 You've qualified for free delivery!
-                    </div>
-                  )}
-
-                  {cartTotal < 1000 && (
-                    <div className="text-sm text-gray-500">
-                      Add ৳{(1000 - cartTotal).toFixed(2)} more for free delivery
-                    </div>
-                  )}
+                  {/* Delivery Info */}
+                  <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg mt-3">
+                    <div className="font-medium text-blue-900 mb-1">📦 Delivery Charges:</div>
+                    <ul className="space-y-1 ml-4">
+                      <li>• Inside Dhaka: ৳60</li>
+                      <li className="text-green-600 font-medium">• Uttara: Free!</li>
+                      <li>• Outside Dhaka: ৳120</li>
+                    </ul>
+                    <p className="mt-2 text-gray-600">*Exact charge calculated at checkout</p>
+                  </div>
                   
                   <div className="border-t pt-3">
                     <div className="flex justify-between text-lg font-semibold text-gray-900">

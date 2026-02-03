@@ -9,17 +9,17 @@ const {
   getOrderStats
 } = require('../controllers/orderController');
 const { protect } = require('../middleware/auth');
-const { authorize } = require('../middleware/admin');
+const { requireAdmin } = require('../middleware/admin');
 const { createOrderValidator, idValidator } = require('../utils/validators');
+
+// Admin routes (must come before parameterized routes)
+router.get('/stats/dashboard', protect, requireAdmin, getOrderStats);
+router.get('/all', protect, requireAdmin, getAllOrders);
+router.put('/:id/status', protect, requireAdmin, idValidator, updateOrderStatus);
 
 // User routes
 router.post('/', protect, createOrderValidator, createOrder);
 router.get('/myorders', protect, getMyOrders);
 router.get('/:id', protect, idValidator, getOrder);
-
-// Admin routes
-router.get('/', protect, authorize('admin'), getAllOrders);
-router.put('/:id/status', protect, authorize('admin'), idValidator, updateOrderStatus);
-router.get('/stats/dashboard', protect, authorize('admin'), getOrderStats);
 
 module.exports = router;

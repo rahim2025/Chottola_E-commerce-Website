@@ -21,7 +21,7 @@ export const orderService = {
 
   // Get all orders (Admin)
   getAllOrders: async (params = {}) => {
-    const response = await api.get('/orders', { params });
+    const response = await api.get('/orders/all', { params });
     return response.data;
   },
 

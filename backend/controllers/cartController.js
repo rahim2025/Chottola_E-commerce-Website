@@ -9,7 +9,7 @@ const { validationResult } = require('express-validator');
 exports.getCart = async (req, res, next) => {
   try {
     let cart = await Cart.findOne({ user: req.user._id, isActive: true })
-      .populate('items.product', 'name images pricing sku isActive');
+      .populate('items.product', 'name images price discountPrice isActive');
 
     if (!cart) {
       cart = await Cart.create({
@@ -82,12 +82,12 @@ exports.addToCart = async (req, res, next) => {
     await cart.addItem(
       productId,
       quantity,
-      product.pricing.sellingPrice,
-      product.pricing.discountPrice || 0
+      product.price,
+      product.discountPrice || 0
     );
 
     // Populate cart for response
-    await cart.populate('items.product', 'name images pricing sku');
+    await cart.populate('items.product', 'name images price discountPrice');
 
     res.status(200).json({
       success: true,
@@ -138,7 +138,7 @@ exports.updateCartItem = async (req, res, next) => {
     await cart.updateItemQuantity(productId, quantity);
 
     // Populate cart for response
-    await cart.populate('items.product', 'name images pricing sku');
+    await cart.populate('items.product', 'name images price discountPrice');
 
     res.status(200).json({
       success: true,
@@ -170,7 +170,7 @@ exports.removeFromCart = async (req, res, next) => {
     await cart.removeItem(productId);
 
     // Populate cart for response
-    await cart.populate('items.product', 'name images pricing sku');
+    await cart.populate('items.product', 'name images price discountPrice');
 
     res.status(200).json({
       success: true,
@@ -324,8 +324,8 @@ exports.syncCart = async (req, res, next) => {
             cart.items.push({
               product: item._id,
               quantity: quantityToAdd,
-              price: product.pricing.sellingPrice,
-              discountPrice: product.pricing.discountPrice || 0
+              price: product.price,
+              discountPrice: product.discountPrice || 0
             });
           }
         }
@@ -333,7 +333,7 @@ exports.syncCart = async (req, res, next) => {
     }
 
     await cart.save();
-    await cart.populate('items.product', 'name images pricing sku');
+    await cart.populate('items.product', 'name images price discountPrice');
 
     res.status(200).json({
       success: true,
