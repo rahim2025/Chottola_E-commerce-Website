@@ -60,12 +60,11 @@ exports.addToCart = async (req, res, next) => {
       });
     }
 
-    // Check inventory availability
-    const inventory = await Inventory.findOne({ product: productId });
-    if (inventory && inventory.stock.current < quantity) {
+    // Check product stock availability
+    if (product.stock < quantity) {
       return res.status(400).json({
         success: false,
-        message: `Only ${inventory.stock.current} items available in stock`
+        message: `Only ${product.stock} items available in stock`
       });
     }
 
@@ -123,13 +122,13 @@ exports.updateCartItem = async (req, res, next) => {
       });
     }
 
-    // Check inventory if increasing quantity
+    // Check product stock if increasing quantity
     if (quantity > 0) {
-      const inventory = await Inventory.findOne({ product: productId });
-      if (inventory && inventory.stock.current < quantity) {
+      const product = await Product.findById(productId);
+      if (product && product.stock < quantity) {
         return res.status(400).json({
           success: false,
-          message: `Only ${inventory.stock.current} items available in stock`
+          message: `Only ${product.stock} items available in stock`
         });
       }
     }
@@ -315,9 +314,8 @@ exports.syncCart = async (req, res, next) => {
       if (item._id && item.quantity > 0) {
         const product = await Product.findById(item._id);
         if (product && product.isActive) {
-          // Check inventory
-          const inventory = await Inventory.findOne({ product: item._id });
-          const availableStock = inventory ? inventory.stock.current : 0;
+          // Check product stock
+          const availableStock = product.stock || 0;
           const quantityToAdd = Math.min(item.quantity, availableStock);
           
           if (quantityToAdd > 0) {

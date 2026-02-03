@@ -4,6 +4,7 @@ const Cart = require('../models/Cart');
 const Inventory = require('../models/Inventory');
 const { validationResult } = require('express-validator');
 const mongoose = require('mongoose');
+const { sendOrderConfirmation, sendOrderStatusUpdate } = require('../utils/emailService');
 
 // @desc    Create new order from cart
 // @route   POST /api/orders
@@ -49,12 +50,11 @@ exports.createOrder = async (req, res, next) => {
         });
       }
 
-      // Check inventory
-      const inventory = await Inventory.findOne({ product: product._id }).session(session);
-      if (!inventory || inventory.stock.current < cartItem.quantity) {
+      // Check product stock
+      if (product.stock < cartItem.quantity) {
         return res.status(400).json({
           success: false,
-          message: `Insufficient stock for ${product.name}. Available: ${inventory?.stock.current || 0}, Required: ${cartItem.quantity}`
+          message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Required: ${cartItem.quantity}`
         });
       }
 
@@ -71,14 +71,32 @@ exports.createOrder = async (req, res, next) => {
       });
     }
 
-    // Calculate order totals
+    // Calculate order totals based on location
     const subtotal = cart.subtotal;
     const tax = cart.tax || 0;
-    const shippingCost = cart.shippingCost || (subtotal > 1000 ? 0 : 60); // Free shipping over ৳1000
+    const city = shippingAddress.city?.toLowerCase() || '';
+    const division = shippingAddress.division || '';
+    
+    // Calculate delivery fee
+    let shippingCost;
+    if (city.includes('uttara')) {
+      shippingCost = 0; // Free delivery for Uttara
+    } else if (division === 'Dhaka') {
+      shippingCost = 60; // Inside Dhaka
+    } else {
+      shippingCost = 120; // Outside Dhaka
+    }
+    
     const discount = cart.discount || 0;
     const totalAmount = subtotal + tax + shippingCost - discount;
 
+    // Generate order number
+    const timestamp = Date.now().toString().slice(-8);
+    const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const orderNumber = `ORD-${timestamp}-${random}`;
+
     const order = await Order.create([{
+      orderNumber,
       user: req.user._id,
       items: orderItems,
       shippingAddress,
@@ -90,42 +108,24 @@ exports.createOrder = async (req, res, next) => {
       couponCode: cart.couponCode,
       totalAmount,
       notes,
-      status: 'pending'
+      orderStatus: 'pending',
+      statusHistory: [{
+        status: 'pending',
+        timestamp: new Date(),
+        updatedBy: req.user._id,
+        note: 'Order placed'
+      }]
     }], { session });
 
     const createdOrder = order[0];
 
-    // Update inventory and create movements
+    // Update product stock
     for (const cartItem of cart.items) {
-      const inventory = await Inventory.findOne({ product: cartItem.product._id }).session(session);
-      
-      // Reduce stock
-      inventory.stock.current -= cartItem.quantity;
-      inventory.stock.reserved += cartItem.quantity;
-      
-      // Add movement record
-      inventory.movements.push({
-        type: 'out',
-        quantity: cartItem.quantity,
-        reason: 'Order placed',
-        reference: `ORDER-${createdOrder._id}`,
-        date: new Date(),
-        user: req.user._id,
-        notes: `Order: ${createdOrder._id}`
-      });
-
-      // Update batches (FIFO)
-      let remainingToReduce = cartItem.quantity;
-      for (let batch of inventory.batches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate))) {
-        if (remainingToReduce <= 0) break;
-        if (batch.quantity > 0) {
-          const reduceFromBatch = Math.min(batch.quantity, remainingToReduce);
-          batch.quantity -= reduceFromBatch;
-          remainingToReduce -= reduceFromBatch;
-        }
-      }
-
-      await inventory.save({ session });
+      await Product.findByIdAndUpdate(
+        cartItem.product._id,
+        { $inc: { stock: -cartItem.quantity } },
+        { session }
+      );
     }
 
     // Clear the cart
@@ -139,6 +139,14 @@ exports.createOrder = async (req, res, next) => {
     const populatedOrder = await Order.findById(createdOrder._id)
       .populate('user', 'name email')
       .populate('items.product', 'name images');
+
+    // Send order confirmation email (async, don't wait)
+    const customerEmail = shippingAddress.email || req.user.email;
+    if (customerEmail) {
+      sendOrderConfirmation(populatedOrder, customerEmail).catch(err => {
+        console.error('Failed to send confirmation email:', err);
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -265,9 +273,10 @@ exports.getAllOrders = async (req, res, next) => {
 // @access  Private/Admin
 exports.updateOrderStatus = async (req, res, next) => {
   try {
-    const { orderStatus, paymentStatus } = req.body;
+    const { orderStatus, paymentStatus, note } = req.body;
 
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id)
+      .populate('user', 'name email');
 
     if (!order) {
       return res.status(404).json({
@@ -276,8 +285,22 @@ exports.updateOrderStatus = async (req, res, next) => {
       });
     }
 
+    const oldStatus = order.orderStatus;
+
     if (orderStatus) {
       order.orderStatus = orderStatus;
+      
+      // Add to status history
+      if (!order.statusHistory) {
+        order.statusHistory = [];
+      }
+      
+      order.statusHistory.push({
+        status: orderStatus,
+        timestamp: new Date(),
+        updatedBy: req.user._id,
+        note: note || `Status changed from ${oldStatus} to ${orderStatus}`
+      });
     }
 
     if (paymentStatus) {
@@ -285,6 +308,16 @@ exports.updateOrderStatus = async (req, res, next) => {
     }
 
     await order.save();
+
+    // Send status update email if status changed
+    if (orderStatus && orderStatus !== oldStatus) {
+      const customerEmail = order.shippingAddress.email || order.user?.email;
+      if (customerEmail) {
+        sendOrderStatusUpdate(order, customerEmail).catch(err => {
+          console.error('Failed to send status update email:', err);
+        });
+      }
+    }
 
     res.status(200).json({
       success: true,

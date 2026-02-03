@@ -47,20 +47,25 @@ exports.createCategoryValidator = [
 
 // Order validators
 exports.createOrderValidator = [
-  body('items')
-    .isArray({ min: 1 }).withMessage('Order must contain at least one item'),
-  body('shippingAddress.name')
+  body('shippingAddress.fullName')
     .trim()
-    .notEmpty().withMessage('Recipient name is required'),
+    .notEmpty().withMessage('Full name is required'),
+  body('shippingAddress.email')
+    .trim()
+    .notEmpty().withMessage('Email is required')
+    .isEmail().withMessage('Please provide a valid email'),
   body('shippingAddress.phone')
     .trim()
     .notEmpty().withMessage('Phone number is required'),
-  body('shippingAddress.street')
+  body('shippingAddress.address')
     .trim()
-    .notEmpty().withMessage('Street address is required'),
+    .notEmpty().withMessage('Address is required'),
   body('shippingAddress.city')
     .trim()
     .notEmpty().withMessage('City is required'),
+  body('shippingAddress.division')
+    .trim()
+    .notEmpty().withMessage('Division is required'),
   body('paymentMethod')
     .notEmpty().withMessage('Payment method is required')
 ];

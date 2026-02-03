@@ -1,53 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import { orderService } from '../../services/orderService';
-import { userService } from '../../services/userService';
-import Loader from '../../components/common/Loader';
 import { useAuth } from '../../hooks/useAuth';
 
 const Dashboard = () => {
-  const [stats, setStats] = useState(null);
-  const [userStats, setUserStats] = useState(null);
-  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const isSuperAdmin = user?.role === 'super-admin';
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
-    try {
-      const [orderResponse, usersResponse] = await Promise.all([
-        orderService.getOrderStats(),
-        isSuperAdmin ? userService.getAllUsers() : Promise.resolve(null)
-      ]);
-      
-      setStats(orderResponse.data);
-      
-      if (usersResponse) {
-        const users = usersResponse.data.data;
-        const usersByRole = users.reduce((acc, user) => {
-          acc[user.role] = (acc[user.role] || 0) + 1;
-          return acc;
-        }, {});
-        
-        setUserStats({
-          total: users.length,
-          byRole: usersByRole,
-          active: users.filter(u => u.accountStatus === 'active').length,
-          suspended: users.filter(u => u.accountStatus === 'suspended').length
-        });
-      }
-    } catch (error) {
-      toast.error('Failed to load statistics');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) return <Loader />;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -112,95 +69,6 @@ const Dashboard = () => {
           </div>
         </Link>
       </div>
-
-      {/* Super Admin User Statistics */}
-      {isSuperAdmin && userStats && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">User Analytics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6\">
-            <div className="card bg-gradient-to-br from-blue-50 to-blue-100\">
-              <h3 className="text-gray-600 mb-2\">Total Users</h3>
-              <p className="text-4xl font-bold text-blue-600\">{userStats.total}</p>
-            </div>
-            <div className="card bg-gradient-to-br from-green-50 to-green-100\">
-              <h3 className="text-gray-600 mb-2\">Active Users</h3>
-              <p className="text-4xl font-bold text-green-600\">{userStats.active}</p>
-            </div>
-            <div className="card bg-gradient-to-br from-purple-50 to-purple-100\">
-              <h3 className="text-gray-600 mb-2\">Admins</h3>
-              <p className="text-4xl font-bold text-purple-600\">
-                {(userStats.byRole.admin || 0) + (userStats.byRole['super-admin'] || 0)}
-              </p>
-            </div>
-            <div className="card bg-gradient-to-br from-red-50 to-red-100\">
-              <h3 className="text-gray-600 mb-2\">Suspended</h3>
-              <p className="text-4xl font-bold text-red-600\">{userStats.suspended}</p>
-            </div>
-          </div>
-          
-          <div className="mt-4 grid grid-cols-1 md:grid-cols-4 gap-4\">
-            <div className="card\">
-              <h4 className="text-sm text-gray-600 mb-2\">Customers</h4>
-              <p className="text-2xl font-semibold\">{userStats.byRole.customer || 0}</p>
-            </div>
-            <div className="card\">
-              <h4 className="text-sm text-gray-600 mb-2\">Moderators</h4>
-              <p className="text-2xl font-semibold\">{userStats.byRole.moderator || 0}</p>
-            </div>
-            <div className="card\">
-              <h4 className="text-sm text-gray-600 mb-2\">Admins</h4>
-              <p className="text-2xl font-semibold\">{userStats.byRole.admin || 0}</p>
-            </div>
-            <div className="card\">
-              <h4 className="text-sm text-gray-600 mb-2\">Super Admins</h4>
-              <p className="text-2xl font-semibold\">{userStats.byRole['super-admin'] || 0}</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Order Statistics */}
-      {stats && (
-        <>
-          <h2 className="text-2xl font-semibold mb-4\">Order Statistics</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8\">
-            <div className="card bg-gradient-to-br from-blue-50 to-blue-100\">
-              <h3 className="text-gray-600 mb-2\">Total Orders</h3>
-              <p className="text-4xl font-bold text-blue-600\">{stats.totalOrders}</p>
-              <p className="text-sm text-gray-600 mt-2\">All time</p>
-            </div>
-
-            <div className="card bg-gradient-to-br from-green-50 to-green-100\">
-              <h3 className="text-gray-600 mb-2\">Total Revenue</h3>
-              <p className="text-4xl font-bold text-green-600\">${stats.totalRevenue.toFixed(2)}</p>
-              <p className="text-sm text-gray-600 mt-2\">Lifetime earnings</p>
-            </div>
-
-            <div className="card bg-gradient-to-br from-purple-50 to-purple-100\">
-              <h3 className="text-gray-600 mb-2\">Average Order</h3>
-              <p className="text-4xl font-bold text-purple-600\">
-                ${stats.totalOrders > 0 ? (stats.totalRevenue / stats.totalOrders).toFixed(2) : '0.00'}
-              </p>
-              <p className="text-sm text-gray-600 mt-2\">Per order</p>
-            </div>
-          </div>
-
-          {/* Order Status Breakdown */}
-          <div className="card\">
-            <h3 className="text-xl font-semibold mb-4\">Orders by Status</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4\">
-              {stats.ordersByStatus.map(status => (
-                <div key={status._id} className="p-4 bg-gray-50 rounded-lg\">
-                  <div className="flex justify-between items-center\">
-                    <span className="capitalize font-medium\">{status._id}</span>
-                    <span className="text-2xl font-bold text-blue-600\">{status.count}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 };

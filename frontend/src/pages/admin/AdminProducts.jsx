@@ -118,24 +118,6 @@ const AdminProducts = () => {
     setCurrentPage(1);
   };
 
-  // Stock status badge
-  const getStockStatusBadge = (inventory) => {
-    if (!inventory) return <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">No Data</span>;
-    
-    const { stockStatus } = inventory;
-    const badgeClasses = {
-      'in_stock': 'bg-green-100 text-green-800',
-      'low_stock': 'bg-yellow-100 text-yellow-800',
-      'out_of_stock': 'bg-red-100 text-red-800'
-    };
-    
-    return (
-      <span className={`px-2 py-1 text-xs rounded-full ${badgeClasses[stockStatus] || 'bg-gray-100 text-gray-800'}`}>
-        {stockStatus?.replace('_', ' ').toUpperCase() || 'Unknown'}
-      </span>
-    );
-  };
-
   useEffect(() => {
     fetchProducts();
   }, [filters]);
@@ -296,9 +278,6 @@ const AdminProducts = () => {
                   Price
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Stock
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -345,12 +324,6 @@ const AdminProducts = () => {
                         {product.currency || 'BDT'} {product.price.toFixed(2)}
                       </div>
                     )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {product.stock || 0} units
-                    </div>
-                    {getStockStatusBadge(product.inventory)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex flex-col gap-1">

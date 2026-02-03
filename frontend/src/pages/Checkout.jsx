@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { FaCreditCard, FaMoneyBillWave, FaLock, FaCheck } from 'react-icons/fa';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
+import { orderService } from '../services/orderService';
 import Loader from '../components/common/Loader';
 
 const Checkout = () => {
@@ -108,35 +109,27 @@ const Checkout = () => {
         notes: formData.notes
       };
 
-      const response = await fetch('/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(orderData)
-      });
+      const orderResponse = await orderService.createOrder(orderData);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to create order');
+      if (!orderResponse?.success) {
+        throw new Error(orderResponse?.message || 'Failed to create order');
       }
-
-      const data = await response.json();
       
       toast.success('Order placed successfully!');
       
-      // Navigate to order confirmation
-      navigate(`/orders/${data.data._id}`, { 
+      clearCart();
+
+      // Navigate to order success page
+      navigate('/order-success', { 
         state: { 
-          orderCreated: true,
-          orderDetails: data.data 
+          orderDetails: orderResponse.data 
         }
       });
 
     } catch (error) {
       console.error('Checkout error:', error);
-      toast.error(error.message || 'Failed to place order');
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to place order';
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }

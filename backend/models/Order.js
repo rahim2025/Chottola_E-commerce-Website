@@ -31,7 +31,11 @@ const orderSchema = new mongoose.Schema({
     image: String
   }],
   shippingAddress: {
-    name: {
+    fullName: {
+      type: String,
+      required: true
+    },
+    email: {
       type: String,
       required: true
     },
@@ -39,7 +43,7 @@ const orderSchema = new mongoose.Schema({
       type: String,
       required: true
     },
-    street: {
+    address: {
       type: String,
       required: true
     },
@@ -47,18 +51,19 @@ const orderSchema = new mongoose.Schema({
       type: String,
       required: true
     },
-    state: {
+    division: {
       type: String,
       required: true
     },
-    zipCode: {
-      type: String,
-      required: true
+    postalCode: {
+      type: String
     },
-    country: {
-      type: String,
-      required: true
-    }
+    // Keep old fields for backward compatibility
+    name: String,
+    street: String,
+    state: String,
+    zipCode: String,
+    country: String
   },
   paymentMethod: {
     type: String,
@@ -94,7 +99,34 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: [0, 'Total amount cannot be negative']
-  }
+  },
+  discount: {
+    type: Number,
+    default: 0,
+    min: [0, 'Discount cannot be negative']
+  },
+  couponCode: {
+    type: String
+  },
+  notes: {
+    type: String
+  },
+  statusHistory: [{
+    status: {
+      type: String,
+      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+      required: true
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    note: String
+  }]
 }, {
   timestamps: true
 });
