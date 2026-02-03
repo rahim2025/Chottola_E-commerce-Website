@@ -40,15 +40,17 @@ const allowedOrigins = [
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  if (origin && (allowedOrigins.length === 0 || allowedOrigins.includes(origin))) {
+  const isAllowedOrigin = origin && (allowedOrigins.length === 0 || allowedOrigins.includes(origin));
+
+  if (isAllowedOrigin) {
     res.header('Access-Control-Allow-Origin', origin);
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.header('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
   }
 
-  // Handle preflight requests
-  if (req.method === 'OPTIONS') {
+  // Let global CORS handler take care of origins we do not explicitly whitelist
+  if (req.method === 'OPTIONS' && isAllowedOrigin) {
     return res.status(204).end();
   }
 
