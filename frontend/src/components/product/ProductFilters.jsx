@@ -9,6 +9,8 @@ const ProductFilters = ({
   totalProducts = 0 
 }) => {
   const [searchTerm, setSearchTerm] = useState(initialFilters.search || '');
+  const [minPriceInput, setMinPriceInput] = useState(initialFilters.minPrice || '');
+  const [maxPriceInput, setMaxPriceInput] = useState(initialFilters.maxPrice || '');
   const [suggestions, setSuggestions] = useState({ products: [], brands: [], categories: [] });
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -25,6 +27,8 @@ const ProductFilters = ({
   });
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  const debouncedMinPrice = useDebounce(minPriceInput, 600);
+  const debouncedMaxPrice = useDebounce(maxPriceInput, 600);
 
   // Handle search suggestions
   useEffect(() => {
@@ -53,6 +57,15 @@ const ProductFilters = ({
   useEffect(() => {
     setFilters(prev => ({ ...prev, search: debouncedSearchTerm }));
   }, [debouncedSearchTerm]);
+
+  // Update filters when debounced price values change
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, minPrice: debouncedMinPrice }));
+  }, [debouncedMinPrice]);
+
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, maxPrice: debouncedMaxPrice }));
+  }, [debouncedMaxPrice]);
 
   // Emit filter changes
   useEffect(() => {
@@ -103,6 +116,8 @@ const ProductFilters = ({
 
   const clearAllFilters = () => {
     setSearchTerm('');
+    setMinPriceInput('');
+    setMaxPriceInput('');
     setFilters({
       search: '',
       category: [],
@@ -324,16 +339,16 @@ const ProductFilters = ({
                 <input
                   type="number"
                   placeholder="Min"
-                  value={filters.minPrice}
-                  onChange={(e) => handleFilterChange('minPrice', e.target.value)}
+                  value={minPriceInput}
+                  onChange={(e) => setMinPriceInput(e.target.value)}
                   className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   min="0"
                 />
                 <input
                   type="number"
                   placeholder="Max"
-                  value={filters.maxPrice}
-                  onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
+                  value={maxPriceInput}
+                  onChange={(e) => setMaxPriceInput(e.target.value)}
                   className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   min="0"
                 />

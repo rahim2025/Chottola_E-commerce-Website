@@ -5,9 +5,8 @@ import ProductCard from '../components/product/ProductCard';
 import { productService } from '../services/productService';
 import { categoryService } from '../services/categoryService';
 import { useCart } from '../hooks/useCart';
-import { useAuth } from '../hooks/useAuth';
 import Loader from '../components/common/Loader';
-import { FaShoppingCart, FaLeaf, FaTruck, FaPercent, FaShieldAlt, FaClock } from 'react-icons/fa';
+import { FaTruck, FaPercent, FaShieldAlt, FaClock } from 'react-icons/fa';
 
 const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -17,7 +16,7 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const { addToCart } = useCart();
-  const { isAdmin } = useAuth();
+
 
   useEffect(() => {
     fetchProducts();
@@ -118,88 +117,6 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-background-primary">
-      {/* Hero Banner Section */}
-      <section className="relative bg-gradient-to-r from-primary-500 to-primary-600 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative container mx-auto px-4 py-12 lg:py-16">
-          <div className="grid lg:grid-cols-2 gap-8 items-center">
-            {/* Left Side - Hero Content */}
-            <div className="space-y-6">
-              <div className="flex items-center space-x-3">
-                <FaLeaf className="text-3xl text-primary-100" />
-                <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
-                  <span className="text-sm font-medium">Fresh & Organic</span>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <h1 className="text-4xl lg:text-6xl font-bold font-heading leading-tight">
-                  Fresh Groceries
-                  <span className="block text-accent-400">Delivered Daily</span>
-                </h1>
-                <p className="text-xl text-primary-100 leading-relaxed max-w-lg">
-                  Get farm-fresh produce, premium quality goods, and daily essentials delivered to your doorstep.
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link 
-                  to="/products" 
-                  className="inline-flex items-center justify-center bg-accent-500 hover:bg-accent-600 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors shadow-lg"
-                >
-                  <FaShoppingCart className="mr-2" />
-                  Shop Now
-                </Link>
-                {isAdmin ? (
-                  <Link
-                    to="/admin/dashboard"
-                    className="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-purple-800 transition-all shadow-lg"
-                  >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    Admin Dashboard
-                  </Link>
-                ) : (
-                  <button className="px-8 py-4 border-2 border-white/30 text-white rounded-xl font-semibold hover:bg-white/10 transition-all">
-                    Browse Categories
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Right Side - Product Images */}
-            <div className="relative">
-              <div className="grid grid-cols-2 gap-4">
-                {featuredProducts.slice(0, 4).map((product, index) => (
-                  <div key={product._id} className="relative group">
-                    <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300">
-                      <img 
-                        src={product.images[0]?.url} 
-                        alt={product.name}
-                        className="w-full h-32 object-cover rounded-xl mb-3"
-                      />
-                      <h3 className="font-semibold text-text-primary text-sm mb-2 line-clamp-2">
-                        {product.name}
-                      </h3>
-                      <div className="text-xl font-bold text-primary-600">
-                        ৳{product.discountPrice || product.price}
-                      </div>
-                    </div>
-                    {index === 0 && (
-                      <div className="absolute -top-2 -right-2 bg-danger-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                        Fresh!
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      
 
       {/* Categories Section */}
       <section className="py-12 bg-background-secondary">
@@ -214,16 +131,16 @@ const Home = () => {
           </div>
           
           {categoriesLoading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {[...Array(6)].map((_, index) => (
-                <div key={index} className="bg-background-secondary rounded-2xl p-6 text-center shadow-sm border border-gray-100 animate-pulse">
-                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-xl"></div>
-                  <div className="h-4 bg-gray-200 rounded mx-auto w-24"></div>
+                <div key={index} className="bg-background-secondary rounded-xl p-3 text-center shadow-sm border border-gray-100 animate-pulse">
+                  <div className="w-10 h-10 mx-auto mb-2 bg-gray-200 rounded-lg"></div>
+                  <div className="h-3 bg-gray-200 rounded mx-auto w-16"></div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 lg:gap-6">
+            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
               {categories.map((category, index) => {
                 // Helper function to get color class
                 const getColorClass = (color, index) => {
@@ -234,37 +151,37 @@ const Home = () => {
                 };
 
                 const colorClass = getColorClass(category.color, index);
-                
+
                 return (
                   <Link
                     key={category._id}
                     to={`/products?category=${category.slug || category._id}`}
-                    className="group bg-background-secondary rounded-2xl p-6 text-center shadow-sm border border-gray-100 hover:shadow-lg hover:border-primary-200 transition-all duration-300"
+                    className="group bg-background-secondary rounded-xl p-3 text-center shadow-sm border border-gray-100 hover:shadow-md hover:border-primary-200 transition-all duration-300"
                   >
-                    <div className={`w-16 h-16 mx-auto mb-4 bg-${colorClass}-100 rounded-xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform duration-300 overflow-hidden`}>
+                    <div className={`w-10 h-10 mx-auto mb-2 bg-${colorClass}-100 rounded-lg flex items-center justify-center text-xl group-hover:scale-110 transition-transform duration-300 overflow-hidden`}>
                       {category.image?.url ? (
-                        <img 
-                          src={category.image.url} 
+                        <img
+                          src={category.image.url}
                           alt={category.image.alt || category.name}
-                          className="w-full h-full object-cover rounded-xl"
+                          className="w-full h-full object-cover rounded-lg"
                           onError={(e) => {
                             e.target.style.display = 'none';
                             e.target.nextSibling.style.display = 'block';
                           }}
                         />
                       ) : null}
-                      <span 
+                      <span
                         className={`${category.image?.url ? 'hidden' : 'block'}`}
                         style={{ display: category.image?.url ? 'none' : 'block' }}
                       >
                         {category.icon || '📦'}
                       </span>
                     </div>
-                    <h3 className="font-semibold text-text-primary group-hover:text-primary-600 transition-colors">
+                    <h3 className="text-xs font-semibold text-text-primary group-hover:text-primary-600 transition-colors leading-tight">
                       {category.name}
                     </h3>
                     {category.stats?.productCount > 0 && (
-                      <p className="text-sm text-text-muted mt-1">
+                      <p className="text-xs text-text-muted mt-0.5">
                         {category.stats.productCount} items
                       </p>
                     )}

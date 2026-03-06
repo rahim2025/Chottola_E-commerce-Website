@@ -96,13 +96,13 @@ const Footer = () => {
               <div className="flex items-start">
                 <FaMapMarkerAlt className="text-primary-400 mt-1 mr-3 flex-shrink-0" />
                 <div className="text-gray-300">
-                  <p>123 Food Street</p>
-                  <p>New York, NY 10001</p>
+                  <p>Chattala Bakery, Begum Jahura Market (বেগম জাহুরা মার্কেট), Sector-14, Uttara</p>
+                  <p> Dhaka, Bangladesh</p>
                 </div>
               </div>
               <div className="flex items-center">
                 <FaPhone className="text-primary-400 mr-3 flex-shrink-0" />
-                <span className="text-gray-300">+1 (555) 123-4567</span>
+                <span className="text-gray-300">+880 1793910530</span>
               </div>
               <div className="flex items-center">
                 <FaEnvelope className="text-primary-400 mr-3 flex-shrink-0" />
@@ -114,9 +114,8 @@ const Footer = () => {
             <div className="mt-6">
               <h5 className="font-semibold text-white mb-3">Business Hours</h5>
               <div className="text-gray-300 text-sm space-y-1">
-                <p>Mon - Fri: 8:00 AM - 8:00 PM</p>
-                <p>Saturday: 9:00 AM - 6:00 PM</p>
-                <p>Sunday: 10:00 AM - 4:00 PM</p>
+                <p> Fri - Sat: 10:00 AM - 11:00 PM</p>
+                
               </div>
             </div>
           </div>

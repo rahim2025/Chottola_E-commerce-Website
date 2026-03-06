@@ -353,24 +353,20 @@ exports.getProducts = async (req, res, next) => {
       }
     }
 
-    // Price range filter (check both regular and discount price)
+    // Price range filter — use discountPrice when > 0, otherwise fall back to price
     if (req.query.minPrice || req.query.maxPrice) {
-      const priceQuery = {};
-      if (req.query.minPrice) priceQuery.$gte = parseFloat(req.query.minPrice);
-      if (req.query.maxPrice) priceQuery.$lte = parseFloat(req.query.maxPrice);
-      
-      // Match products where either price or discountPrice is in range
-      matchQuery.$or = matchQuery.$or || [];
-      matchQuery.$or.push(
-        { 
-          $expr: {
-            $and: [
-              { $gte: [{ $ifNull: ["$discountPrice", "$price"] }, priceQuery.$gte || 0] },
-              { $lte: [{ $ifNull: ["$discountPrice", "$price"] }, priceQuery.$lte || Number.MAX_VALUE] }
-            ]
-          }
-        }
-      );
+      const effectivePriceExpr = {
+        $cond: { if: { $gt: ['$discountPrice', 0] }, then: '$discountPrice', else: '$price' }
+      };
+      const priceConditions = [];
+      if (req.query.minPrice) {
+        priceConditions.push({ $gte: [effectivePriceExpr, parseFloat(req.query.minPrice)] });
+      }
+      if (req.query.maxPrice) {
+        priceConditions.push({ $lte: [effectivePriceExpr, parseFloat(req.query.maxPrice)] });
+      }
+      matchQuery.$and = matchQuery.$and || [];
+      matchQuery.$and.push({ $expr: { $and: priceConditions } });
     }
 
     // Filter by stock availability

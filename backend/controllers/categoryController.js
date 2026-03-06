@@ -1,4 +1,5 @@
 const Category = require('../models/Category');
+const Product = require('../models/Product');
 const { validationResult } = require('express-validator');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/helpers');
 
@@ -82,10 +83,26 @@ exports.getCategories = async (req, res, next) => {
       .populate('parent', 'name slug')
       .sort(sortBy);
 
+    // Compute live product counts per category
+    const productCounts = await Product.aggregate([
+      { $match: { isActive: true } },
+      { $group: { _id: '$category', count: { $sum: 1 } } }
+    ]);
+    const countMap = {};
+    productCounts.forEach(({ _id, count }) => {
+      if (_id) countMap[_id.toString()] = count;
+    });
+
+    const categoriesWithCounts = categories.map(cat => {
+      const obj = cat.toObject();
+      obj.stats = { ...obj.stats, productCount: countMap[cat._id.toString()] || 0 };
+      return obj;
+    });
+
     res.status(200).json({
       success: true,
-      data: categories,
-      count: categories.length
+      data: categoriesWithCounts,
+      count: categoriesWithCounts.length
     });
   } catch (error) {
     next(error);
