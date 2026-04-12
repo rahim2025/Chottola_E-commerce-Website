@@ -148,6 +148,14 @@ exports.createOrder = async (req, res, next) => {
       });
     }
 
+    // Send website inbox copy (configured Nodemailer mailbox)
+    const websiteInboxEmail = process.env.STORE_NOTIFICATION_EMAIL || process.env.EMAIL_USER;
+    if (websiteInboxEmail && websiteInboxEmail !== customerEmail) {
+      sendOrderConfirmation(populatedOrder, websiteInboxEmail).catch(err => {
+        console.error('Failed to send website inbox order email:', err);
+      });
+    }
+
     res.status(201).json({
       success: true,
       message: 'Order created successfully',
@@ -207,12 +215,16 @@ exports.getOrder = async (req, res, next) => {
       });
     }
 
-    // Check if user is authorized to view this order
-    if (order.user._id.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to view this order'
-      });
+    // Check if user is authorized to view this order.
+    // Guard null user for legacy/deleted-account orders.
+    if (req.user.role !== 'admin') {
+      const orderUserId = order.user?._id?.toString();
+      if (!orderUserId || orderUserId !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Not authorized to view this order'
+        });
+      }
     }
 
     res.status(200).json({
@@ -243,6 +255,19 @@ exports.getAllOrders = async (req, res, next) => {
     // Filter by payment status
     if (req.query.paymentStatus) {
       query.paymentStatus = req.query.paymentStatus;
+    }
+
+    // Group filter for easier admin handling
+    // completed => delivered + paid
+    // active => everything else
+    if (req.query.group === 'completed') {
+      query.orderStatus = 'delivered';
+      query.paymentStatus = 'paid';
+    } else if (req.query.group === 'active') {
+      query.$or = [
+        { orderStatus: { $ne: 'delivered' } },
+        { paymentStatus: { $ne: 'paid' } }
+      ];
     }
 
     const orders = await Order.find(query)

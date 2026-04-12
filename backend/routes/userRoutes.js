@@ -15,7 +15,6 @@ const {
 const { getMe } = require('../controllers/authController');
 const { protect, requireEmailVerification, optionalAuth } = require('../middleware/auth');
 const { 
-  requireUserManagement, 
   requireAdmin, 
   requireOwnershipOrAdmin 
 } = require('../middleware/admin');
@@ -40,11 +39,11 @@ router.delete('/wishlist/:productId', removeFromWishlist);
 
 // Admin only routes
 router.use(adminRateLimit); // More lenient rate limiting for admins
-router.get('/', requireUserManagement, getUsers); // Get all users
+router.get('/', requireAdmin, getUsers); // Get all users
 router.get('/:id', requireOwnershipOrAdmin('_id'), getUserById); // Get specific user
-router.put('/:id/role', requireUserManagement, updateUserRole); // Update user role (super-admin)
+router.put('/:id/role', requireAdmin, updateUserRole); // Update user role
 router.put('/:id/status', requireAdmin, updateUserStatus); // Update user status
 router.put('/:id', requireAdmin, updateUser); // Update user
-router.delete('/:id', requireUserManagement, deleteUser); // Delete user
+router.delete('/:id', requireAdmin, deleteUser); // Delete user
 
 module.exports = router;

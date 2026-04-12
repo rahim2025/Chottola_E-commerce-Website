@@ -1,65 +1,64 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { useAuth } from '../hooks/useAuth';
 import authService from '../services/authService';
+import { useAuthStore } from '../stores/authStore';
 
-const Register = () => {
+const ResetPassword = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { setUser, setAccessToken } = useAuthStore();
+
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
+    email: location.state?.email || '',
     otp: '',
     password: '',
     confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
+  const [resending, setResending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const navigate = useNavigate();
-  const { register } = useAuth();
+  const onChange = (e) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  };
 
-  const handleSendOTP = async () => {
+  const handleResendOTP = async () => {
     if (!formData.email.trim()) {
       toast.error('Please enter your email first');
       return;
     }
 
     try {
-      setOtpLoading(true);
-      await authService.sendSignupOTP(formData.email.trim().toLowerCase());
-      setOtpSent(true);
-      toast.success('Signup OTP sent to your email');
+      setResending(true);
+      await authService.forgotPassword(formData.email.trim().toLowerCase());
+      toast.success('New OTP sent to your email');
     } catch (error) {
-      toast.error(error.message || 'Failed to send OTP');
+      toast.error(error.message || 'Failed to resend OTP');
     } finally {
-      setOtpLoading(false);
+      setResending(false);
     }
-  };
-
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.email) {
-      toast.error('Please provide your email');
+    if (!formData.email.trim() || !formData.otp.trim() || !formData.password.trim() || !formData.confirmPassword.trim()) {
+      toast.error('Please fill in all fields');
       return;
     }
 
-    if (!formData.otp || formData.otp.trim().length !== 6 || !/^\d{6}$/.test(formData.otp.trim())) {
-      toast.error('Please enter a valid 6-digit OTP');
+    if (formData.otp.trim().length !== 6 || !/^\d{6}$/.test(formData.otp.trim())) {
+      toast.error('OTP must be exactly 6 digits');
       return;
     }
 
-    // Validate passwords match
+    if (formData.password.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       toast.error('Passwords do not match');
       return;
@@ -67,16 +66,18 @@ const Register = () => {
 
     try {
       setLoading(true);
-      const { confirmPassword, ...userData } = formData;
-      await register({
-        ...userData,
-        email: userData.email.trim().toLowerCase(),
-        otp: userData.otp.trim()
+      const response = await authService.resetPasswordWithOTP({
+        email: formData.email.trim().toLowerCase(),
+        otp: formData.otp.trim(),
+        password: formData.password
       });
-      toast.success('Registration successful!');
+
+      setUser(response.data.user);
+      setAccessToken(response.data.accessToken);
+      toast.success('Password reset successfully');
       navigate('/');
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      toast.error(error.message || 'Failed to reset password');
     } finally {
       setLoading(false);
     }
@@ -86,50 +87,30 @@ const Register = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
       <div className="max-w-md w-full">
         <div className="bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-3xl font-bold text-center mb-8">Register</h2>
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-gray-700 mb-2">Name</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="input-field"
-                placeholder="Enter your name"
-              />
-            </div>
+          <h2 className="text-3xl font-bold text-center mb-2">Reset Password</h2>
+          <p className="text-center text-gray-600 mb-8">Confirm reset with email OTP</p>
 
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-gray-700 mb-2">Email</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
-                onChange={handleChange}
+                onChange={onChange}
                 required
                 className="input-field"
                 placeholder="Enter your email"
               />
-              <button
-                type="button"
-                onClick={handleSendOTP}
-                disabled={otpLoading}
-                className="mt-2 text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
-              >
-                {otpLoading ? 'Sending OTP...' : otpSent ? 'Resend OTP' : 'Send OTP'}
-              </button>
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-2">Email OTP</label>
+              <label className="block text-gray-700 mb-2">OTP</label>
               <input
                 type="text"
                 name="otp"
                 value={formData.otp}
-                onChange={handleChange}
+                onChange={onChange}
                 required
                 maxLength={6}
                 className="input-field"
@@ -138,17 +119,17 @@ const Register = () => {
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-2">Password</label>
+              <label className="block text-gray-700 mb-2">New Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={formData.password}
-                  onChange={handleChange}
+                  onChange={onChange}
                   required
-                  minLength="6"
+                  minLength={6}
                   className="input-field pr-16"
-                  placeholder="Enter your password"
+                  placeholder="Enter new password"
                 />
                 <button
                   type="button"
@@ -161,16 +142,17 @@ const Register = () => {
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-2">Confirm Password</label>
+              <label className="block text-gray-700 mb-2">Confirm New Password</label>
               <div className="relative">
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   name="confirmPassword"
                   value={formData.confirmPassword}
-                  onChange={handleChange}
+                  onChange={onChange}
                   required
+                  minLength={6}
                   className="input-field pr-16"
-                  placeholder="Confirm your password"
+                  placeholder="Confirm new password"
                 />
                 <button
                   type="button"
@@ -187,14 +169,23 @@ const Register = () => {
               disabled={loading}
               className="w-full btn-primary disabled:opacity-50"
             >
-              {loading ? 'Loading...' : 'Register'}
+              {loading ? 'Resetting...' : 'Reset Password'}
             </button>
           </form>
 
+          <button
+            type="button"
+            onClick={handleResendOTP}
+            disabled={resending}
+            className="w-full mt-4 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-2 rounded-md disabled:opacity-50"
+          >
+            {resending ? 'Sending...' : 'Resend OTP'}
+          </button>
+
           <p className="text-center mt-6 text-gray-600">
-            Already have an account?{' '}
+            Back to{' '}
             <Link to="/login" className="text-blue-600 hover:underline">
-              Login here
+              Login
             </Link>
           </p>
         </div>
@@ -203,4 +194,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default ResetPassword;

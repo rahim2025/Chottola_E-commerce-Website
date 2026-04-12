@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { FaSearch, FaEye, FaFilter, FaDownload, FaCheckCircle, FaTruck, FaBox, FaTimes, FaClock } from 'react-icons/fa';
+import { FaSearch, FaEye, FaFilter } from 'react-icons/fa';
 import { orderService } from '../../services/orderService';
 import Loader from '../../components/common/Loader';
 
@@ -11,8 +11,10 @@ const AdminOrders = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
+  const [orderView, setOrderView] = useState('active');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [counts, setCounts] = useState({ active: 0, completed: 0 });
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -24,8 +26,9 @@ const AdminOrders = () => {
 
   useEffect(() => {
     fetchOrders();
+    fetchCounts();
     fetchStats();
-  }, [currentPage, statusFilter, paymentFilter]);
+  }, [currentPage, statusFilter, paymentFilter, orderView]);
 
   const fetchOrders = async () => {
     try {
@@ -43,10 +46,10 @@ const AdminOrders = () => {
         params.paymentStatus = paymentFilter;
       }
 
-      const response = await orderService.getAllOrders(params);
-      
+      const response = await orderService.getGroupedOrders(orderView, params);
+
       if (response.success) {
-        setOrders(response.data);
+        setOrders(Array.isArray(response.data) ? response.data : []);
         setTotalPages(response.pagination?.pages || 1);
       } else {
         toast.error(response.message || 'Failed to load orders');
@@ -55,10 +58,25 @@ const AdminOrders = () => {
       console.error('Error fetching orders:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to load orders';
       toast.error(errorMessage);
-      // Set empty orders to avoid undefined errors
       setOrders([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCounts = async () => {
+    try {
+      const [activeResponse, completedResponse] = await Promise.all([
+        orderService.getGroupedOrders('active', { page: 1, limit: 1 }),
+        orderService.getGroupedOrders('completed', { page: 1, limit: 1 })
+      ]);
+
+      setCounts({
+        active: activeResponse?.pagination?.total || 0,
+        completed: completedResponse?.pagination?.total || 0
+      });
+    } catch (error) {
+      console.error('Error fetching grouped counts:', error);
     }
   };
 
@@ -70,7 +88,7 @@ const AdminOrders = () => {
           acc[item._id] = item.count;
           return acc;
         }, {});
-        
+
         setStats({
           total: response.data.totalOrders || 0,
           pending: statusData.pending || 0,
@@ -94,6 +112,7 @@ const AdminOrders = () => {
       if (response.success) {
         toast.success('Order status updated successfully');
         fetchOrders();
+        fetchCounts();
         fetchStats();
       }
     } catch (error) {
@@ -111,6 +130,8 @@ const AdminOrders = () => {
       if (response.success) {
         toast.success('Payment status updated successfully');
         fetchOrders();
+        fetchCounts();
+        fetchStats();
       }
     } catch (error) {
       console.error('Error updating payment status:', error);
@@ -138,24 +159,13 @@ const AdminOrders = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const getStatusIcon = (status) => {
-    const icons = {
-      pending: <FaClock className="inline mr-1" />,
-      processing: <FaBox className="inline mr-1" />,
-      shipped: <FaTruck className="inline mr-1" />,
-      delivered: <FaCheckCircle className="inline mr-1" />,
-      cancelled: <FaTimes className="inline mr-1" />
-    };
-    return icons[status] || null;
-  };
-
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = orders.filter((order) => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      order.orderNumber?.toLowerCase().includes(searchLower) ||
-      order.user?.name?.toLowerCase().includes(searchLower) ||
-      order.user?.email?.toLowerCase().includes(searchLower) ||
-      order.shippingAddress?.name?.toLowerCase().includes(searchLower)
+      order?.orderNumber?.toLowerCase().includes(searchLower) ||
+      order?.user?.name?.toLowerCase().includes(searchLower) ||
+      order?.user?.email?.toLowerCase().includes(searchLower) ||
+      order?.shippingAddress?.name?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -165,49 +175,74 @@ const AdminOrders = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900">Manage Orders</h1>
         <p className="text-gray-600 mt-2">View and manage all customer orders</p>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => {
+              setOrderView('active');
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              orderView === 'active'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Active Orders ({counts.active})
+          </button>
+          <button
+            onClick={() => {
+              setOrderView('completed');
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+              orderView === 'completed'
+                ? 'bg-green-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Completed Orders ({counts.completed})
+          </button>
+        </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="text-sm text-gray-600 mb-1">Total Orders</div>
           <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
         </div>
-        
+
         <div className="bg-yellow-50 rounded-lg shadow-sm border border-yellow-200 p-4">
           <div className="text-sm text-yellow-700 mb-1">Pending</div>
           <div className="text-2xl font-bold text-yellow-900">{stats.pending}</div>
         </div>
-        
+
         <div className="bg-blue-50 rounded-lg shadow-sm border border-blue-200 p-4">
           <div className="text-sm text-blue-700 mb-1">Processing</div>
           <div className="text-2xl font-bold text-blue-900">{stats.processing}</div>
         </div>
-        
+
         <div className="bg-purple-50 rounded-lg shadow-sm border border-purple-200 p-4">
           <div className="text-sm text-purple-700 mb-1">Shipped</div>
           <div className="text-2xl font-bold text-purple-900">{stats.shipped}</div>
         </div>
-        
+
         <div className="bg-green-50 rounded-lg shadow-sm border border-green-200 p-4">
           <div className="text-sm text-green-700 mb-1">Delivered</div>
           <div className="text-2xl font-bold text-green-900">{stats.delivered}</div>
         </div>
-        
+
         <div className="bg-red-50 rounded-lg shadow-sm border border-red-200 p-4">
           <div className="text-sm text-red-700 mb-1">Cancelled</div>
           <div className="text-2xl font-bold text-red-900">{stats.cancelled}</div>
         </div>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <FaSearch className="inline mr-2" />
@@ -222,7 +257,6 @@ const AdminOrders = () => {
             />
           </div>
 
-          {/* Status Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <FaFilter className="inline mr-2" />
@@ -245,7 +279,6 @@ const AdminOrders = () => {
             </select>
           </div>
 
-          {/* Payment Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Payment Status
@@ -267,7 +300,6 @@ const AdminOrders = () => {
         </div>
       </div>
 
-      {/* Orders Table */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -303,98 +335,109 @@ const AdminOrders = () => {
               {filteredOrders.length === 0 ? (
                 <tr>
                   <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
-                    No orders found
+                    {orderView === 'completed' ? 'No completed orders found' : 'No active orders found'}
                   </td>
                 </tr>
               ) : (
-                filteredOrders.map((order) => (
-                  <tr key={order._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        #{order.orderNumber}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {order.user?.name || order.shippingAddress?.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {order.user?.email || order.shippingAddress?.phone}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {new Date(order.createdAt).toLocaleTimeString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {order.items?.length || 0} items
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-gray-900">
-                        ৳{order.totalAmount?.toFixed(2)}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {order.paymentMethod}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <select
-                        value={order.paymentStatus}
-                        onChange={(e) => handlePaymentStatusUpdate(order._id, e.target.value)}
-                        className={`text-xs font-semibold px-2 py-1 rounded-full ${getPaymentStatusColor(order.paymentStatus)} cursor-pointer`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="paid">Paid</option>
-                        <option value="failed">Failed</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <select
-                        value={order.orderStatus}
-                        onChange={(e) => handleStatusUpdate(order._id, e.target.value)}
-                        className={`text-xs font-semibold px-2 py-1 rounded-full ${getStatusColor(order.orderStatus)} cursor-pointer`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="processing">Processing</option>
-                        <option value="shipped">Shipped</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <Link
-                        to={`/admin/orders/${order._id}`}
-                        className="text-indigo-600 hover:text-indigo-900 font-medium inline-flex items-center"
-                      >
-                        <FaEye className="mr-1" />
-                        View Details
-                      </Link>
-                    </td>
-                  </tr>
-                ))
+                filteredOrders.map((order) => {
+                  const orderId = order?._id;
+                  return (
+                    <tr key={orderId || order?.orderNumber} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          #{order?.orderNumber || 'N/A'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {order?.user?.name || order?.shippingAddress?.name || 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {order?.user?.email || order?.shippingAddress?.phone || 'N/A'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          {order?.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {order?.createdAt ? new Date(order.createdAt).toLocaleTimeString() : ''}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {order?.items?.length || 0} items
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-gray-900">
+                          ৳{order?.totalAmount?.toFixed(2) || '0.00'}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {order?.paymentMethod || 'N/A'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <select
+                          value={order?.paymentStatus || 'pending'}
+                          onChange={(e) => orderId && handlePaymentStatusUpdate(orderId, e.target.value)}
+                          disabled={!orderId}
+                          className={`text-xs font-semibold px-2 py-1 rounded-full ${getPaymentStatusColor(order?.paymentStatus)} cursor-pointer disabled:opacity-50`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="paid">Paid</option>
+                          <option value="failed">Failed</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <select
+                          value={order?.orderStatus || 'pending'}
+                          onChange={(e) => orderId && handleStatusUpdate(orderId, e.target.value)}
+                          disabled={!orderId}
+                          className={`text-xs font-semibold px-2 py-1 rounded-full ${getStatusColor(order?.orderStatus)} cursor-pointer disabled:opacity-50`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="processing">Processing</option>
+                          <option value="shipped">Shipped</option>
+                          <option value="delivered">Delivered</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {orderId ? (
+                          <Link
+                            to={`/admin/orders/${orderId}`}
+                            className="text-indigo-600 hover:text-indigo-900 font-medium inline-flex items-center"
+                          >
+                            <FaEye className="mr-1" />
+                            View Details
+                          </Link>
+                        ) : (
+                          <span className="text-gray-400 inline-flex items-center">
+                            <FaEye className="mr-1" />
+                            Unavailable
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
             <div className="flex items-center justify-between">
               <div className="flex-1 flex justify-between sm:hidden">
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
                   className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
                   className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                 >
@@ -411,7 +454,7 @@ const AdminOrders = () => {
                 <div>
                   <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
                     <button
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
                       className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >
@@ -431,7 +474,7 @@ const AdminOrders = () => {
                       </button>
                     ))}
                     <button
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
                       className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                     >

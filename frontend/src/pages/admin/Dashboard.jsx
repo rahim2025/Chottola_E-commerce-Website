@@ -1,23 +1,44 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { orderService } from '../../services/orderService';
 
 const Dashboard = () => {
-  const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'super-admin';
+  const [pendingOrders, setPendingOrders] = useState(0);
+
+  useEffect(() => {
+    const fetchPendingOrders = async () => {
+      try {
+        const response = await orderService.getOrderStats();
+        if (response.success && Array.isArray(response.data?.ordersByStatus)) {
+          const pending = response.data.ordersByStatus.find((item) => item._id === 'pending')?.count || 0;
+          setPendingOrders(pending);
+        }
+      } catch (error) {
+        console.error('Failed to fetch pending orders count:', error);
+      }
+    };
+
+    fetchPendingOrders();
+    const intervalId = setInterval(fetchPendingOrders, 10000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">
-          {isSuperAdmin ? 'Super Admin Dashboard' : 'Admin Dashboard'}
-        </h1>
-        {isSuperAdmin && (
-          <Link to="/admin/settings" className="btn-primary">
-            System Settings
-          </Link>
-        )}
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <Link to="/admin/settings" className="btn-primary">
+          System Settings
+        </Link>
       </div>
+
+      {pendingOrders > 0 && (
+        <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3">
+          <p className="text-yellow-900 font-semibold">
+            🔔 Pending Order Alert: {pendingOrders} order{pendingOrders > 1 ? 's' : ''} waiting for action.
+          </p>
+        </div>
+      )}
 
       {/* Quick Links */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -37,7 +58,9 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xl font-semibold mb-2">Orders</h3>
-              <p className="text-gray-600">Manage orders</p>
+              <p className="text-gray-600">
+                Manage orders{pendingOrders > 0 ? ` (${pendingOrders} pending)` : ''}
+              </p>
             </div>
             <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />

@@ -10,6 +10,7 @@ import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
 import PrivateRoute from './components/common/PrivateRoute';
 import AdminRoute from './components/common/AdminRoute';
+import AdminOrderNotifier from './components/common/AdminOrderNotifier';
 
 // Pages
 import Home from './pages/Home';
@@ -19,6 +20,8 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import Orders from './pages/Orders';
 import OrderDetail from './pages/OrderDetail';
@@ -39,6 +42,7 @@ import SystemSettings from './pages/admin/SystemSettings';
 function App() {
   const initializeAuth = useAuthStore((state) => state.initialize);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isAdmin = useAuthStore((state) => state.isAdmin);
   const setCartAuthenticated = useCartStore((state) => state.setAuthenticated);
 
   // Initialize stores on mount
@@ -48,25 +52,28 @@ function App() {
 
   // Sync cart with auth state
   useEffect(() => {
-    setCartAuthenticated(isAuthenticated);
-  }, [isAuthenticated, setCartAuthenticated]);
+    setCartAuthenticated(isAuthenticated && !isAdmin);
+  }, [isAuthenticated, isAdmin, setCartAuthenticated]);
 
   return (
     <Router>
       <div className="flex flex-col min-h-screen">
         <Navbar />
+        {isAuthenticated && isAdmin && <AdminOrderNotifier />}
         <main className="flex-grow">
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route path="/products" element={<Products />} />
             <Route path="/products/:id" element={<ProductDetail />} />
-            <Route path="/cart" element={<Cart />} />
+            <Route path="/cart" element={isAdmin ? <Home /> : <Cart />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Private Routes */}
-            <Route path="/checkout" element={<PrivateRoute><Checkout /></PrivateRoute>} />
+            <Route path="/checkout" element={<PrivateRoute>{isAdmin ? <Home /> : <Checkout />}</PrivateRoute>} />
             <Route path="/order-success" element={<PrivateRoute><OrderSuccess /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
             <Route path="/orders" element={<PrivateRoute><Orders /></PrivateRoute>} />

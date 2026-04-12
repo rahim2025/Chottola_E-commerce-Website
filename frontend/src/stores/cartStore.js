@@ -28,6 +28,8 @@ export const useCartStore = create(
         set({ isAuthenticated: status });
         if (status) {
           get().fetchCartFromBackend();
+        } else {
+          set({ cartItems: [], cartCount: 0, cartTotal: 0 });
         }
       },
 

@@ -1,14 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FaShoppingCart, FaUser, FaBars, FaTimes, FaHeart } from 'react-icons/fa';
+import { FaShoppingCart, FaUser, FaBars, FaTimes } from 'react-icons/fa';
 import { useAuth } from '../../hooks/useAuth';
 import { useCart } from '../../hooks/useCart';
 import QuickSearch from './QuickSearch';
+import { orderService } from '../../services/orderService';
 
 const Navbar = () => {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const { getCartCount } = useCart();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [pendingOrders, setPendingOrders] = useState(0);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const fetchPendingOrders = async () => {
+      try {
+        const response = await orderService.getOrderStats();
+        if (response.success && Array.isArray(response.data?.ordersByStatus)) {
+          const pending = response.data.ordersByStatus.find((item) => item._id === 'pending')?.count || 0;
+          setPendingOrders(pending);
+        }
+      } catch (error) {
+        console.error('Failed to fetch pending orders for navbar:', error);
+      }
+    };
+
+    fetchPendingOrders();
+    const intervalId = setInterval(fetchPendingOrders, 10000);
+    return () => clearInterval(intervalId);
+  }, [isAdmin]);
 
   return (
     <nav className="bg-white shadow-lg sticky top-0 z-50 border-b border-gray-100">
@@ -35,8 +57,13 @@ const Navbar = () => {
               Products
             </Link>
             {isAdmin && (
-              <Link to="/admin/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors duration-300 font-medium">
-                Admin
+              <Link to="/admin/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors duration-300 font-medium inline-flex items-center gap-2">
+                <span>Admin</span>
+                {pendingOrders > 0 && (
+                  <span className="bg-red-500 text-white text-xs font-bold rounded-full min-w-6 h-6 px-2 inline-flex items-center justify-center">
+                    {pendingOrders}
+                  </span>
+                )}
               </Link>
             )}
           </div>
@@ -48,15 +75,17 @@ const Navbar = () => {
               <QuickSearch className="w-64" />
             </div>
 
-            {/* Cart */}
-            <Link to="/cart" className="relative p-2 group">
-              <FaShoppingCart className="text-xl text-gray-600 group-hover:text-primary-600 transition-colors duration-300" />
-              {getCartCount() > 0 && (
-                <span className="absolute -top-1 -right-1 bg-gradient-to-r from-accent-500 to-accent-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
-                  {getCartCount()}
-                </span>
-              )}
-            </Link>
+            {/* Cart (hidden for admin) */}
+            {!isAdmin && (
+              <Link to="/cart" className="relative p-2 group">
+                <FaShoppingCart className="text-xl text-gray-600 group-hover:text-primary-600 transition-colors duration-300" />
+                {getCartCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-gradient-to-r from-accent-500 to-accent-600 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
+                    {getCartCount()}
+                  </span>
+                )}
+              </Link>
+            )}
 
             {/* User Menu */}
             {isAuthenticated ? (

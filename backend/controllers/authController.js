@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const emailOtpService = require('../utils/emailOtpService');
 
 // @desc    Register new user
 // @route   POST /api/auth/register
@@ -19,31 +20,33 @@ exports.register = async (req, res, next) => {
       });
     }
 
-    const { name, email, password, phone } = req.body;
-
-    // Validate at least one of email or phone is provided
-    if (!email && !phone) {
-      return res.status(400).json({
-        success: false,
-        message: 'Either email or phone number must be provided'
-      });
-    }
+    const { name, email, password, otp } = req.body;
 
     // Check if user already exists
-    const existingUserQuery = [];
-    if (email) existingUserQuery.push({ email: email.toLowerCase() });
-    if (phone) existingUserQuery.push({ phone });
-    
-    const userExists = await User.findOne({ 
-      $or: existingUserQuery
-    });
+    const userExists = await User.findOne({ email: email.toLowerCase() });
     
     if (userExists) {
       return res.status(400).json({
         success: false,
-        message: userExists.email === email ? 
-          'User already exists with this email' : 
-          'User already exists with this phone number'
+        message: 'User already exists with this email'
+      });
+    }
+
+    let emailLower = null;
+    emailLower = email.toLowerCase();
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email OTP is required for registration'
+      });
+    }
+
+    const verifyResult = await emailOtpService.verifyOTP(emailLower, otp);
+    if (!verifyResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: verifyResult.message,
+        attemptsRemaining: verifyResult.attemptsRemaining
       });
     }
 
@@ -52,10 +55,12 @@ exports.register = async (req, res, next) => {
       name,
       password
     };
-    if (email) userData.email = email.toLowerCase();
-    if (phone) userData.phone = phone;
-    
+    if (emailLower) {
+      userData.email = emailLower;
+      userData.emailVerified = true;
+    }
     const user = await User.create(userData);
+    await emailOtpService.consumeOTP(emailLower);
 
     // Generate tokens
     const { accessToken, refreshToken } = generateToken(user._id);
@@ -78,6 +83,7 @@ exports.register = async (req, res, next) => {
           email: user.email,
           phone: user.phone,
           role: user.role,
+          authMethod: user.authMethod,
           emailVerified: user.emailVerified,
           phoneVerified: user.phoneVerified
         },
@@ -103,27 +109,20 @@ exports.login = async (req, res, next) => {
       });
     }
 
-    const { identifier, email, password, rememberMe } = req.body;
+    const { email, password, rememberMe } = req.body;
     const ipAddress = req.ip || req.connection.remoteAddress;
 
-    // Support both old (email) and new (identifier) format
-    const loginIdentifier = identifier || email;
-    
-    if (!loginIdentifier) {
+    if (!email) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide email or phone number'
+        message: 'Please provide email'
       });
     }
 
-    // Check if identifier is email or phone
-    const isEmail = loginIdentifier.includes('@');
-    const query = isEmail ? 
-      { email: loginIdentifier.toLowerCase() } : 
-      { phone: loginIdentifier };
+    const loginIdentifier = email.toLowerCase();
 
     // Check if user exists and select password field
-    const user = await User.findOne(query).select('+password');
+    const user = await User.findOne({ email: loginIdentifier }).select('+password');
     
     if (!user) {
       console.log(`Login attempt failed: User not found for ${loginIdentifier}`);
@@ -327,8 +326,17 @@ exports.changePassword = async (req, res, next) => {
 // @access  Public
 exports.forgotPassword = async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
     const { email } = req.body;
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = email?.toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       return res.status(404).json({
@@ -337,20 +345,22 @@ exports.forgotPassword = async (req, res, next) => {
       });
     }
 
-    // Generate reset token
-    const resetToken = user.createPasswordResetToken();
-    await user.save({ validateBeforeSave: false });
+    const otpResult = await emailOtpService.generateAndSendOTP(normalizedEmail, {
+      purpose: 'password reset'
+    });
 
-    // Create reset URL
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
-    // TODO: Send email with reset link
-    // For now, just return success (in production, integrate with email service)
-    console.log(`Password reset URL: ${resetUrl}`);
+    if (!otpResult.success) {
+      return res.status(otpResult.retryAfter ? 429 : 400).json({
+        success: false,
+        message: otpResult.message,
+        retryAfter: otpResult.retryAfter
+      });
+    }
 
     res.status(200).json({
       success: true,
-      message: 'Password reset email sent successfully'
+      message: 'Password reset OTP sent successfully',
+      expiresIn: otpResult.expiresIn
     });
   } catch (error) {
     next(error);
@@ -358,34 +368,43 @@ exports.forgotPassword = async (req, res, next) => {
 };
 
 // @desc    Reset password
-// @route   PUT /api/auth/reset-password/:token
+// @route   PUT /api/auth/reset-password
 // @access  Public
 exports.resetPassword = async (req, res, next) => {
   try {
-    const { token } = req.params;
-    const { password } = req.body;
-
-    // Hash token and find user
-    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-
-    const user = await User.findOne({
-      'verification.passwordReset.token': hashedToken,
-      'verification.passwordReset.expires': { $gt: Date.now() }
-    });
-
-    if (!user) {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid or expired password reset token'
+        errors: errors.array()
+      });
+    }
+
+    const { email, otp, password } = req.body;
+    const normalizedEmail = email?.toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found with this email'
+      });
+    }
+
+    const verifyResult = await emailOtpService.verifyOTP(normalizedEmail, otp);
+    if (!verifyResult.success) {
+      return res.status(400).json({
+        success: false,
+        message: verifyResult.message,
+        attemptsRemaining: verifyResult.attemptsRemaining
       });
     }
 
     // Set new password
     user.password = password;
     user.passwordChangedAt = new Date();
-    user.verification.passwordReset.token = undefined;
-    user.verification.passwordReset.expires = undefined;
     await user.save();
+    await emailOtpService.consumeOTP(normalizedEmail);
 
     // Generate new tokens
     const { accessToken, refreshToken } = generateToken(user._id);
@@ -445,6 +464,229 @@ exports.verifyEmail = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: 'Email verified successfully'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Register user with phone + verified OTP
+// @route   POST /api/auth/register/phone
+// @access  Public
+exports.registerWithPhone = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { phone, otp, name } = req.body;
+    const otpService = require('../utils/otpService');
+
+    // Verify OTP first
+    if (!(await otpService.hasValidOTP(phone))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please verify OTP first. Request a new OTP and verify it.'
+      });
+    }
+
+    // Check if user already exists
+    const userExists = await User.findOne({ 
+      $or: [{ phone }, { email: phone.toLowerCase() }]
+    });
+    
+    if (userExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists with this phone number'
+      });
+    }
+
+    // Create user with phone auth
+    const userData = {
+      phone,
+      name: name || null,
+      authMethod: 'phone',
+      phoneVerified: true
+    };
+    
+    const user = await User.create(userData);
+
+    // Consume OTP (mark as used)
+    await otpService.consumeOTP(phone);
+
+    // Generate tokens
+    const { accessToken, refreshToken } = generateToken(user._id);
+
+    // Set refresh token as httpOnly cookie
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully with phone',
+      data: {
+        user: {
+          _id: user._id,
+          name: user.name,
+          phone: user.phone,
+          role: user.role,
+          authMethod: user.authMethod,
+          phoneVerified: user.phoneVerified
+        },
+        accessToken
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Login user with phone + OTP
+// @route   POST /api/auth/login/phone
+// @access  Public
+exports.loginWithPhone = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        errors: errors.array()
+      });
+    }
+
+    const { phone, rememberMe } = req.body;
+    const otpService = require('../utils/otpService');
+
+    // Verify OTP first
+    if (!(await otpService.hasValidOTP(phone))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please verify OTP first'
+      });
+    }
+
+    // Find user
+    const user = await User.findOne({ phone });
+    
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'User not found. Please register first.'
+      });
+    }
+
+    // Check if account is active
+    if (user.accountStatus !== 'active') {
+      return res.status(401).json({
+        success: false,
+        message: 'Account is suspended or deactivated. Please contact support.'
+      });
+    }
+
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Consume OTP
+    await otpService.consumeOTP(phone);
+
+    // Generate tokens
+    const { accessToken, refreshToken } = generateToken(user._id, rememberMe);
+
+    // Set refresh token as httpOnly cookie
+    const refreshTokenAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: refreshTokenAge
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Logged in successfully',
+      data: {
+        user: {
+          _id: user._id,
+          name: user.name,
+          phone: user.phone,
+          role: user.role,
+          authMethod: user.authMethod,
+          phoneVerified: user.phoneVerified,
+          loyaltyPoints: user.loyaltyPoints
+        },
+        accessToken
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update user profile (add name/email for phone users)
+// @route   PUT /api/auth/profile
+// @access  Private
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { name, email } = req.body;
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update name if provided
+    if (name && name.trim().length >= 2) {
+      user.name = name.trim();
+    }
+
+    // Update email if provided
+    if (email && email.includes('@')) {
+      const emailLower = email.toLowerCase();
+      
+      // Check if email already exists
+      const emailExists = await User.findOne({ 
+        email: emailLower,
+        _id: { $ne: user._id }
+      });
+      
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email already in use'
+        });
+      }
+
+      user.email = emailLower;
+      user.authMethod = user.authMethod === 'phone' ? 'both' : user.authMethod;
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          authMethod: user.authMethod
+        }
+      }
     });
   } catch (error) {
     next(error);

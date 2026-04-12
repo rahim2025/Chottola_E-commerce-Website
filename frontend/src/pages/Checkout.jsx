@@ -5,6 +5,7 @@ import { FaCreditCard, FaMoneyBillWave, FaLock, FaCheck } from 'react-icons/fa';
 import { useCart } from '../hooks/useCart';
 import { useAuth } from '../hooks/useAuth';
 import { orderService } from '../services/orderService';
+import { userService } from '../services/userService';
 import Loader from '../components/common/Loader';
 
 const Checkout = () => {
@@ -13,11 +14,12 @@ const Checkout = () => {
   const navigate = useNavigate();
   
   const [loading, setLoading] = useState(false);
+  const [profilePhone, setProfilePhone] = useState((user?.phone || '').trim());
   const [formData, setFormData] = useState({
     shippingAddress: {
       fullName: user?.name || '',
       email: user?.email || '',
-      phone: '',
+      phone: user?.phone || '',
       address: '',
       city: '',
       postalCode: '',
@@ -71,6 +73,43 @@ const Checkout = () => {
     }
   }, [cartItems, navigate]);
 
+  // Auto-fill from profile default address (user can still edit manually)
+  useEffect(() => {
+    const loadProfileAddress = async () => {
+      try {
+        const response = await userService.getProfile();
+        const profile = response?.data;
+        const defaultAddress = profile?.addresses?.find((addr) => addr.isDefault) || profile?.addresses?.[0];
+        const savedPhone = (defaultAddress?.phone || profile?.phone || '').trim();
+        setProfilePhone(savedPhone);
+
+        if (!profile || !defaultAddress) return;
+
+        const fullName =
+          profile.name ||
+          [defaultAddress.firstName, defaultAddress.lastName].filter(Boolean).join(' ').trim();
+
+        setFormData((prev) => ({
+          ...prev,
+          shippingAddress: {
+            ...prev.shippingAddress,
+            fullName: fullName || prev.shippingAddress.fullName,
+            email: profile.email || prev.shippingAddress.email,
+            phone: defaultAddress.phone || profile.phone || prev.shippingAddress.phone,
+            address: defaultAddress.street || prev.shippingAddress.address,
+            city: defaultAddress.city || prev.shippingAddress.city,
+            division: defaultAddress.state || prev.shippingAddress.division,
+            postalCode: defaultAddress.zipCode || prev.shippingAddress.postalCode
+          }
+        }));
+      } catch (error) {
+        console.error('Failed to auto-fill address from profile:', error);
+      }
+    };
+
+    loadProfileAddress();
+  }, []);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
@@ -103,8 +142,19 @@ const Checkout = () => {
         return;
       }
 
+      const normalizedPhone =
+        formData.shippingAddress.phone.trim() || profilePhone;
+
+      if (!normalizedPhone) {
+        toast.error('Phone number is required to place an order');
+        return;
+      }
+
       const orderData = {
-        shippingAddress: formData.shippingAddress,
+        shippingAddress: {
+          ...formData.shippingAddress,
+          phone: normalizedPhone
+        },
         paymentMethod: formData.paymentMethod,
         notes: formData.notes
       };
@@ -188,17 +238,22 @@ const Checkout = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phone Number *
+                    Phone Number {profilePhone ? '' : '*'}
                   </label>
                   <input
                     type="tel"
                     name="shippingAddress.phone"
                     value={formData.shippingAddress.phone}
                     onChange={handleInputChange}
-                    required
+                    required={!profilePhone}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="Enter your phone number"
                   />
+                  {!profilePhone && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Add your phone number to place this order.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -206,7 +261,10 @@ const Checkout = () => {
             {/* Shipping Address */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Shipping Address</h2>
-              
+              <p className="text-sm text-gray-600 mb-4">
+                We auto-filled your saved address from profile. You can edit it manually before placing the order.
+              </p>
+               
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

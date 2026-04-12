@@ -41,6 +41,55 @@ const createTransporter = () => {
   };
 };
 
+// Send OTP email (for email-based verification/login)
+exports.sendEmailOTP = async ({ to, code, expiresInMinutes = 5, purpose = 'verification' }) => {
+  const transporter = createTransporter();
+
+  if (!transporter) {
+    throw new Error('Email transporter not available');
+  }
+
+  const subject = `Your OTP Code (${code})`;
+
+  const mailOptions = {
+    from: process.env.EMAIL_FROM || '"Chottola E-Commerce" <noreply@chottola.com>',
+    to,
+    subject,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #111827; background: #f9fafb; }
+          .container { max-width: 600px; margin: 0 auto; padding: 24px; }
+          .card { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 24px; }
+          .code { font-size: 32px; letter-spacing: 6px; font-weight: 700; padding: 12px 16px; background: #f3f4f6; border-radius: 8px; display: inline-block; }
+          .muted { color: #6b7280; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="card">
+            <h2>Your OTP Code</h2>
+            <p>Use the following one-time password to complete your ${purpose}.</p>
+            <p><span class="code">${code}</span></p>
+            <p class="muted">This code expires in ${expiresInMinutes} minutes.</p>
+            <p class="muted">If you didn’t request this, you can ignore this email.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `Your OTP code is ${code}. It expires in ${expiresInMinutes} minutes. If you didn’t request this, ignore this email.`
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log('✅ OTP email sent:', info.messageId);
+  return info;
+};
+
 // Send order confirmation email
 exports.sendOrderConfirmation = async (order, userEmail) => {
   try {
@@ -54,7 +103,7 @@ exports.sendOrderConfirmation = async (order, userEmail) => {
     const mailOptions = {
       from: process.env.EMAIL_FROM || '"Chottola E-Commerce" <noreply@chottola.com>',
       to: userEmail,
-      subject: `Order Confirmation - ${order.orderNumber}`,
+      subject: `Order Placed - ${order.orderNumber}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -75,7 +124,7 @@ exports.sendOrderConfirmation = async (order, userEmail) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>✅ Order Confirmed!</h1>
+              <h1>✅ Order Placed!</h1>
               <p>Thank you for your order</p>
             </div>
             
@@ -150,7 +199,7 @@ exports.sendOrderConfirmation = async (order, userEmail) => {
         </html>
       `,
       text: `
-Order Confirmation - ${order.orderNumber}
+Order Placed - ${order.orderNumber}
 
 Dear ${order.shippingAddress.fullName || order.shippingAddress.name},
 
@@ -292,6 +341,7 @@ Thank you for shopping with us!
 };
 
 module.exports = {
+  sendEmailOTP: exports.sendEmailOTP,
   sendOrderConfirmation: exports.sendOrderConfirmation,
   sendOrderStatusUpdate: exports.sendOrderStatusUpdate
 };

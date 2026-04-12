@@ -25,6 +25,14 @@ export const orderService = {
     return response.data;
   },
 
+  // Get grouped orders for admin handling
+  getGroupedOrders: async (group, params = {}) => {
+    const response = await api.get('/orders/all', {
+      params: { ...params, group }
+    });
+    return response.data;
+  },
+
   // Update order status (Admin)
   updateOrderStatus: async (id, statusData) => {
     const response = await api.put(`/orders/${id}/status`, statusData);

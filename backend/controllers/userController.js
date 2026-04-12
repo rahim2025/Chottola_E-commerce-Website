@@ -63,7 +63,7 @@ exports.getUserById = async (req, res, next) => {
 // @access  Private
 exports.updateProfile = async (req, res, next) => {
   try {
-    const { name, email, phone, dateOfBirth, gender, preferences } = req.body;
+    const { name, email, phone, dateOfBirth, gender, preferences, addresses } = req.body;
 
     const user = await User.findById(req.user._id);
 
@@ -91,6 +91,10 @@ exports.updateProfile = async (req, res, next) => {
       user.preferences = { ...user.preferences, ...preferences };
     }
 
+    if (Array.isArray(addresses)) {
+      user.addresses = addresses;
+    }
+
     const updatedUser = await user.save();
 
     res.status(200).json({
@@ -103,6 +107,7 @@ exports.updateProfile = async (req, res, next) => {
         phone: updatedUser.phone,
         dateOfBirth: updatedUser.dateOfBirth,
         gender: updatedUser.gender,
+        addresses: updatedUser.addresses,
         preferences: updatedUser.preferences,
         role: updatedUser.role
       }
@@ -237,7 +242,7 @@ exports.updateUserRole = async (req, res, next) => {
   try {
     const { role } = req.body;
     
-    if (!['customer', 'moderator', 'admin', 'super-admin'].includes(role)) {
+    if (!['customer', 'admin'].includes(role)) {
       return res.status(400).json({
         success: false,
         message: 'Invalid role'
@@ -307,7 +312,7 @@ exports.updateUserStatus = async (req, res, next) => {
 // @access  Private/Admin
 exports.updateUser = async (req, res, next) => {
   try {
-    const { role, accountStatus, permissions } = req.body;
+    const { role, accountStatus } = req.body;
     
     const user = await User.findById(req.params.id);
 
@@ -321,13 +326,6 @@ exports.updateUser = async (req, res, next) => {
     if (role) user.role = role;
     if (accountStatus) user.accountStatus = accountStatus;
     
-    if (permissions && (role === 'admin' || role === 'moderator' || role === 'super-admin')) {
-      if (!user.adminData) {
-        user.adminData = {};
-      }
-      user.adminData.permissions = permissions;
-    }
-
     await user.save();
 
     res.status(200).json({

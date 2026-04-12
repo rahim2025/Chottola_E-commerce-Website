@@ -2,7 +2,9 @@ const express = require('express');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
 const connectDB = require('./config/db');
+const User = require('./models/User');
 const errorHandler = require('./middleware/errorHandler');
 const {
   securityHeaders,
@@ -72,14 +74,35 @@ app.use(cookieParser());
 app.use(sanitizeData);
 
 // General API rate limiting
-app.use('/api', createRateLimit({
+const generalApiLimiter = createRateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 200, // requests per window
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
   }
-}));
+});
+
+app.use('/api', async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      if (decoded?.id) {
+        const user = await User.findById(decoded.id).select('role');
+        if (user?.role === 'admin') {
+          return next();
+        }
+      }
+    }
+  } catch (error) {
+    // If token is missing/invalid, continue with normal rate limiting.
+  }
+
+  return generalApiLimiter(req, res, next);
+});
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));

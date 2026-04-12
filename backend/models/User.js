@@ -22,9 +22,9 @@ const addressSchema = new mongoose.Schema({
 const userSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Please provide a name'],
     trim: true,
-    maxlength: [50, 'Name cannot be more than 50 characters']
+    maxlength: [50, 'Name cannot be more than 50 characters'],
+    default: null // Optional for phone-only users
   },
   email: {
     type: String,
@@ -38,13 +38,18 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: [true, 'Please provide a password'],
     minlength: [6, 'Password must be at least 6 characters'],
-    select: false
+    select: false,
+    default: null // Optional for phone-only users
+  },
+  authMethod: {
+    type: String,
+    enum: ['email', 'phone', 'both'],
+    default: 'email'
   },
   role: {
     type: String,
-    enum: ['customer', 'admin', 'super-admin', 'moderator'],
+    enum: ['customer', 'admin'],
     default: 'customer'
   },
   phone: {
@@ -145,7 +150,15 @@ const userSchema = new mongoose.Schema({
   resetPasswordToken: String,
   resetPasswordExpire: Date,
   emailVerificationToken: String,
-  emailVerificationExpire: Date
+  emailVerificationExpire: Date,
+  verification: {
+    phone: {
+      otp: String,
+      attempts: { type: Number, default: 0 },
+      expiresAt: Date,
+      createdAt: Date
+    }
+  }
 }, {
   timestamps: true
 });
@@ -160,13 +173,15 @@ userSchema.virtual('isLocked').get(function() {
   return !!(this.lockUntil && this.lockUntil > Date.now());
 });
 
-// Hash password before saving
+// Hash password before saving (only if password is modified or new)
 userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) {
     next();
+  } else if (this.password) {
+    // Only hash if password exists
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
   }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Compare password method

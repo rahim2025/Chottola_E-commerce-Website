@@ -5,11 +5,12 @@ import { useAuth } from '../hooks/useAuth';
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    identifier: '',
+    email: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -32,7 +33,7 @@ const Login = () => {
     setError('');
     
     // Basic validation
-    if (!formData.identifier.trim() || !formData.password.trim()) {
+    if (!formData.email.trim() || !formData.password.trim()) {
       const errorMsg = 'Please fill in all fields';
       setError(errorMsg);
       toast.error(errorMsg);
@@ -54,7 +55,7 @@ const Login = () => {
         // Server responded with error status
         const message = error.response.data?.message;
         if (error.response.status === 401) {
-          errorMessage = message || 'Invalid email/phone or password';
+          errorMessage = message || 'Invalid email or password';
         } else if (error.response.status === 400) {
           errorMessage = message || 'Please check your input';
         } else {
@@ -91,29 +92,44 @@ const Login = () => {
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-gray-700 mb-2">Email or Phone Number</label>
+              <label className="block text-gray-700 mb-2">Email</label>
               <input
-                type="text"
-                name="identifier"
-                value={formData.identifier}
+                type="email"
+                name="email"
+                value={formData.email}
                 onChange={handleChange}
                 required
                 className={`input-field ${error ? 'border-red-500 focus:border-red-500' : ''}`}
-                placeholder="Enter your email or phone number"
+                placeholder="Enter your email"
               />
             </div>
 
             <div>
               <label className="block text-gray-700 mb-2">Password</label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className={`input-field ${error ? 'border-red-500 focus:border-red-500' : ''}`}
-                placeholder="Enter your password"
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  className={`input-field pr-16 ${error ? 'border-red-500 focus:border-red-500' : ''}`}
+                  placeholder="Enter your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-blue-600 hover:text-blue-700"
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+
+            <div className="text-right -mt-2">
+              <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+                Forgot password?
+              </Link>
             </div>
 
             <button

@@ -349,18 +349,6 @@ const AdminProducts = () => {
                       >
                         Edit
                       </Link>
-                      <Link
-                        to={`/admin/products/${product._id}/stock`}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Stock
-                      </Link>
-                      <Link
-                        to={`/admin/products/${product._id}/inventory`}
-                        className="text-green-600 hover:text-green-900"
-                      >
-                        Inventory
-                      </Link>
                       <button
                         onClick={() => handleDelete(product._id)}
                         className="text-red-600 hover:text-red-900"

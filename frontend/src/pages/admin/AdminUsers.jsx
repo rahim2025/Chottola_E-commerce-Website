@@ -13,11 +13,9 @@ const AdminUsers = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
     role: '',
-    accountStatus: '',
-    permissions: []
+    accountStatus: ''
   });
   const { user: currentUser } = useAuth();
-  const isSuperAdmin = currentUser?.role === 'super-admin';
 
   useEffect(() => {
     fetchUsers();
@@ -36,11 +34,6 @@ const AdminUsers = () => {
   };
 
   const handleRoleChange = async (userId, newRole) => {
-    if (!isSuperAdmin) {
-      toast.error('Only super-admins can change user roles');
-      return;
-    }
-
     try {
       await userService.updateUserRole(userId, newRole);
       toast.success('User role updated successfully');
@@ -61,11 +54,6 @@ const AdminUsers = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!isSuperAdmin) {
-      toast.error('Only super-admins can delete users');
-      return;
-    }
-
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
         await userService.deleteUser(userId);
@@ -81,27 +69,12 @@ const AdminUsers = () => {
     setSelectedUser(user);
     setEditForm({
       role: user.role,
-      accountStatus: user.accountStatus,
-      permissions: user.adminData?.permissions || []
+      accountStatus: user.accountStatus
     });
     setShowEditModal(true);
   };
 
-  const handlePermissionToggle = (permission) => {
-    setEditForm(prev => ({
-      ...prev,
-      permissions: prev.permissions.includes(permission)
-        ? prev.permissions.filter(p => p !== permission)
-        : [...prev.permissions, permission]
-    }));
-  };
-
   const handleSaveEdit = async () => {
-    if (!isSuperAdmin) {
-      toast.error('Only super-admins can edit user details');
-      return;
-    }
-
     try {
       await userService.updateUser(selectedUser._id, editForm);
       toast.success('User updated successfully');
@@ -120,24 +93,9 @@ const AdminUsers = () => {
     return matchesFilter && matchesSearch;
   });
 
-  const availablePermissions = [
-    'manage-products',
-    'manage-orders',
-    'manage-users',
-    'manage-categories',
-    'view-analytics',
-    'manage-reviews',
-    'manage-inventory',
-    'manage-discounts',
-    'manage-shipping',
-    'system-settings'
-  ];
-
   const roleColors = {
     'customer': 'bg-gray-100 text-gray-800',
-    'moderator': 'bg-blue-100 text-blue-800',
-    'admin': 'bg-purple-100 text-purple-800',
-    'super-admin': 'bg-red-100 text-red-800'
+    'admin': 'bg-purple-100 text-purple-800'
   };
 
   const statusColors = {
@@ -178,9 +136,7 @@ const AdminUsers = () => {
             >
               <option value="all">All Users</option>
               <option value="customer">Customers</option>
-              <option value="moderator">Moderators</option>
               <option value="admin">Admins</option>
-              <option value="super-admin">Super Admins</option>
             </select>
           </div>
         </div>
@@ -219,22 +175,14 @@ const AdminUsers = () => {
                     <div className="text-sm text-gray-500">{user.phone || 'N/A'}</div>
                   </td>
                   <td className="px-6 py-4">
-                    {isSuperAdmin ? (
-                      <select
-                        value={user.role}
-                        onChange={(e) => handleRoleChange(user._id, e.target.value)}
-                        className={`px-3 py-1 rounded-full text-xs font-semibold ${roleColors[user.role]}`}
-                      >
-                        <option value="customer">Customer</option>
-                        <option value="moderator">Moderator</option>
-                        <option value="admin">Admin</option>
-                        <option value="super-admin">Super Admin</option>
-                      </select>
-                    ) : (
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${roleColors[user.role]}`}>
-                        {user.role}
-                      </span>
-                    )}
+                    <select
+                      value={user.role}
+                      onChange={(e) => handleRoleChange(user._id, e.target.value)}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${roleColors[user.role]}`}
+                    >
+                      <option value="customer">Customer</option>
+                      <option value="admin">Admin</option>
+                    </select>
                   </td>
                   <td className="px-6 py-4">
                     <select
@@ -258,7 +206,7 @@ const AdminUsers = () => {
                     >
                       Edit
                     </button>
-                    {isSuperAdmin && user._id !== currentUser._id && (
+                    {user._id !== currentUser._id && (
                       <button
                         onClick={() => handleDeleteUser(user._id)}
                         className="text-red-600 hover:text-red-800"
@@ -287,12 +235,9 @@ const AdminUsers = () => {
                   value={editForm.role}
                   onChange={(e) => setEditForm({...editForm, role: e.target.value})}
                   className="input-field w-full"
-                  disabled={!isSuperAdmin}
                 >
                   <option value="customer">Customer</option>
-                  <option value="moderator">Moderator</option>
                   <option value="admin">Admin</option>
-                  <option value="super-admin">Super Admin</option>
                 </select>
               </div>
 
@@ -310,24 +255,6 @@ const AdminUsers = () => {
                 </select>
               </div>
 
-              {(editForm.role === 'admin' || editForm.role === 'moderator' || editForm.role === 'super-admin') && isSuperAdmin && (
-                <div>
-                  <label className="block text-gray-700 mb-2">Permissions</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {availablePermissions.map(permission => (
-                      <label key={permission} className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={editForm.permissions.includes(permission)}
-                          onChange={() => handlePermissionToggle(permission)}
-                          className="rounded"
-                        />
-                        <span className="text-sm">{permission}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">

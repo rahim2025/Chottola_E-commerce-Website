@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../hooks/useAuth';
 import Loader from '../../components/common/Loader';
 
 const SystemSettings = () => {
-  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState({
     siteName: 'Chottola',
@@ -40,19 +38,6 @@ const SystemSettings = () => {
       password: ''
     }
   });
-
-  const isSuperAdmin = user?.role === 'super-admin';
-
-  if (!isSuperAdmin) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-          <h2 className="text-2xl font-bold text-red-800 mb-2">Access Denied</h2>
-          <p className="text-red-600">Only super-admins can access system settings.</p>
-        </div>
-      </div>
-    );
-  }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
