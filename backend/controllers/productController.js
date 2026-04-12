@@ -386,7 +386,7 @@ exports.getProducts = async (req, res, next) => {
 
     // Rating filter
     if (req.query.minRating) {
-      matchQuery.averageRating = { $gte: parseFloat(req.query.minRating) };
+      matchQuery['ratings.average'] = { $gte: parseFloat(req.query.minRating) };
     }
 
     pipeline.push({ $match: matchQuery });
@@ -431,7 +431,9 @@ exports.getProducts = async (req, res, next) => {
             },
             else: 0
           }
-        }
+        },
+        averageRating: { $ifNull: ['$ratings.average', 0] },
+        totalReviews: { $ifNull: ['$ratings.count', 0] }
       }
     });
 
@@ -492,6 +494,7 @@ exports.getProducts = async (req, res, next) => {
         brand: 1,
         images: { $slice: ["$images", 1] }, // Only return first image for list view
         stock: 1,
+        ratings: 1,
         averageRating: 1,
         totalReviews: 1,
         isFeatured: 1,

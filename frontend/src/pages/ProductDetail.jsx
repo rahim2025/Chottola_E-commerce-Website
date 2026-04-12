@@ -94,6 +94,7 @@ const ProductDetail = () => {
 
   const finalPrice = product.discountPrice > 0 ? product.discountPrice : product.price;
   const hasDiscount = product.discountPrice > 0 && product.discountPrice < product.price;
+  const displayRating = product.ratings?.average || 0;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -161,7 +162,7 @@ const ProductDetail = () => {
                 <svg
                   key={i}
                   className={`w-5 h-5 ${
-                    i < Math.floor(product.ratings?.average || 0)
+                    i < Math.floor(displayRating)
                       ? 'text-yellow-400'
                       : 'text-gray-300'
                   }`}
@@ -173,7 +174,7 @@ const ProductDetail = () => {
               ))}
             </div>
             <span className="ml-2 text-sm text-gray-600">
-              ({product.ratings?.count || 0} reviews)
+              {displayRating > 0 ? displayRating.toFixed(1) : 'No rating'} ({product.ratings?.count || 0} ratings)
             </span>
           </div>
 
@@ -199,7 +200,7 @@ const ProductDetail = () => {
           {/* Stock Status */}
           <div className="mb-6">
             {product.stock > 0 ? (
-              <span className="text-green-600 font-medium">In Stock ({product.stock} available)</span>
+              <span className="text-green-600 font-medium">In Stock</span>
             ) : (
               <span className="text-red-600 font-medium">Out of Stock</span>
             )}
@@ -295,7 +296,6 @@ const ProductDetail = () => {
         </div>
       </div>
 
-     
     </div>
   );
 };

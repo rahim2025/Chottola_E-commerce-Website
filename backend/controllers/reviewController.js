@@ -1,5 +1,6 @@
 const Review = require('../models/Review');
 const Product = require('../models/Product');
+const Order = require('../models/Order');
 const { validationResult } = require('express-validator');
 
 // @desc    Create product review
@@ -16,7 +17,7 @@ exports.createReview = async (req, res, next) => {
       });
     }
 
-    const { rating, comment } = req.body;
+    const { rating } = req.body;
     const productId = req.params.productId;
 
     // Check if product exists
@@ -25,6 +26,21 @@ exports.createReview = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'Product not found'
+      });
+    }
+
+    // User can rate only after completing a paid+delivered order for that product
+    const completedOrder = await Order.findOne({
+      user: req.user._id,
+      orderStatus: 'delivered',
+      paymentStatus: 'paid',
+      'items.product': productId
+    });
+
+    if (!completedOrder) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can rate this product only after receiving a completed paid order.'
       });
     }
 
@@ -45,8 +61,7 @@ exports.createReview = async (req, res, next) => {
     const review = await Review.create({
       user: req.user._id,
       product: productId,
-      rating,
-      comment
+      rating
     });
 
     // Update product ratings

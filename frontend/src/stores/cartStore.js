@@ -24,12 +24,31 @@ export const useCartStore = create(
       },
 
       // Set authentication status
-      setAuthenticated: (status) => {
+      setAuthenticated: async (status) => {
+        const wasAuthenticated = get().isAuthenticated;
+        const guestItemsToSync = !wasAuthenticated && status ? [...get().cartItems] : [];
+
         set({ isAuthenticated: status });
+
         if (status) {
-          get().fetchCartFromBackend();
-        } else {
+          try {
+            // If user added items while logged out, merge them into backend cart on login.
+            if (guestItemsToSync.length > 0) {
+              await api.post('/cart/sync', { items: guestItemsToSync });
+            }
+          } catch (error) {
+            console.error('Error syncing guest cart on login:', error);
+          }
+
+          await get().fetchCartFromBackend();
+          return;
+        }
+
+        // Clear cart only on real logout transition (authenticated -> guest).
+        if (wasAuthenticated) {
           set({ cartItems: [], cartCount: 0, cartTotal: 0 });
+        } else {
+          get().updateCartTotals(get().cartItems);
         }
       },
 
@@ -256,7 +275,7 @@ export const useCartStore = create(
 
 // Setup global function for auth updates
 if (typeof window !== 'undefined') {
-  window.updateCartAuthStatus = (isAuthenticated) => {
-    useCartStore.getState().setAuthenticated(isAuthenticated);
+  window.updateCartAuthStatus = async (isAuthenticated) => {
+    await useCartStore.getState().setAuthenticated(isAuthenticated);
   };
 }
