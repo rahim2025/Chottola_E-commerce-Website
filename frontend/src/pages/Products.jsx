@@ -55,20 +55,22 @@ const Products = () => {
         const categoriesResponse = await categoryService.getCategories({ isActive: true });
         
         // Transform categories for filter options
-        const categories = categoriesResponse.success ? 
-          categoriesResponse.data.map(cat => ({
+        const categoryList = categoriesResponse?.success && Array.isArray(categoriesResponse?.data)
+          ? categoriesResponse.data
+          : [];
+        const categories = categoryList.map(cat => ({
             id: cat.slug || cat._id,
             name: cat.name,
             productCount: cat.stats?.productCount || 0
-          })) : [];
+          }));
 
         // Try to fetch other filter options from products API
         let brands = [];
         try {
           const response = await fetch(getApiUrl('/products/filters'));
           const data = await response.json();
-          if (data.success) {
-            brands = data.data.brands || [];
+          if (data?.success) {
+            brands = Array.isArray(data?.data?.brands) ? data.data.brands : [];
           }
         } catch (error) {
           console.log('Products filter endpoint not available, using categories only');
