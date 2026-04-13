@@ -31,10 +31,14 @@ const Home = () => {
         // Fetch products with discounts for special offers
         productService.getProducts({ limit: 8, hasDiscount: true })
       ]);
-      
-      setFeaturedProducts(featuredResponse.data);
-      setRegularProducts(regularResponse.data);
-      setSpecialOffers(specialOffersResponse.data);
+
+      const featured = Array.isArray(featuredResponse?.data) ? featuredResponse.data : [];
+      const regular = Array.isArray(regularResponse?.data) ? regularResponse.data : [];
+      const offers = Array.isArray(specialOffersResponse?.data) ? specialOffersResponse.data : [];
+
+      setFeaturedProducts(featured);
+      setRegularProducts(regular);
+      setSpecialOffers(offers);
     } catch (error) {
       toast.error('Failed to load products');
     } finally {
@@ -46,9 +50,11 @@ const Home = () => {
     try {
       setCategoriesLoading(true);
       const response = await categoryService.getMainCategories();
-      if (response.success) {
+      if (response?.success && Array.isArray(response?.data)) {
         // Filter to show only first 6 categories for the homepage
         setCategories(response.data.slice(0, 6));
+      } else {
+        setCategories([]);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -222,7 +228,7 @@ const Home = () => {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
-            {featuredProducts.map(product => (
+            {Array.isArray(featuredProducts) ? featuredProducts.map(product => (
               <div key={product._id} className="relative group">
                 <ProductCard 
                   product={product} 
@@ -234,7 +240,7 @@ const Home = () => {
                   </div>
                 )}
               </div>
-            ))}
+            )) : null}
           </div>
         </div>
       </section>
@@ -255,7 +261,7 @@ const Home = () => {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
-            {regularProducts.slice(0, 6).map(product => (
+            {(Array.isArray(regularProducts) ? regularProducts : []).slice(0, 6).map(product => (
               <ProductCard 
                 key={product._id}
                 product={product} 
@@ -279,13 +285,16 @@ const Home = () => {
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {(specialOffers.length > 0 ? specialOffers : regularProducts.slice(2, 8)).map((product) => (
+            {((Array.isArray(specialOffers) && specialOffers.length > 0)
+              ? specialOffers
+              : (Array.isArray(regularProducts) ? regularProducts : []).slice(2, 8)
+            ).map((product) => (
               <div key={product._id} className="bg-background-secondary rounded-xl p-4 text-center relative shadow-lg">
                 <div className="absolute -top-3 -right-3 bg-danger-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
                   DEAL
                 </div>
                 <img 
-                  src={product.images[0]?.url} 
+                  src={product.images?.[0]?.url} 
                   alt={product.name}
                   className="w-full h-20 object-cover rounded-lg mb-3"
                 />
