@@ -148,9 +148,9 @@ exports.createCategory = async (req, res, next) => {
 
     // Handle image upload
     if (req.file) {
-      const imageUrl = await uploadToCloudinary(req.file.buffer, 'categories');
+      const result = await uploadToCloudinary(req.file, 'categories');
       req.body.image = {
-        url: imageUrl,
+        url: result.secure_url,
         alt: req.body.name || 'Category image'
       };
     }
@@ -192,9 +192,9 @@ exports.updateCategory = async (req, res, next) => {
       if (category.image?.url) {
         await deleteFromCloudinary(category.image.url);
       }
-      const imageUrl = await uploadToCloudinary(req.file.buffer, 'categories');
+      const result = await uploadToCloudinary(req.file, 'categories');
       req.body.image = {
-        url: imageUrl,
+        url: result.secure_url,
         alt: req.body.name || category.name || 'Category image'
       };
     }

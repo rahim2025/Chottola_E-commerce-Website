@@ -1,6 +1,5 @@
 const multer = require('multer');
 const path = require('path');
-const sharp = require('sharp');
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
@@ -32,45 +31,9 @@ const upload = multer({
   fileFilter: fileFilter
 });
 
-// Middleware to compress uploaded images
-const compressImages = async (req, res, next) => {
-  if (!req.files && !req.file) {
-    return next();
-  }
-
-  try {
-    // Handle single file
-    if (req.file) {
-      req.file.buffer = await sharp(req.file.buffer)
-        .resize(1920, 1920, {
-          fit: 'inside',
-          withoutEnlargement: true
-        })
-        .jpeg({ quality: 85, progressive: true, mozjpeg: true })
-        .toBuffer();
-    }
-
-    // Handle multiple files
-    if (req.files && Array.isArray(req.files)) {
-      req.files = await Promise.all(
-        req.files.map(async (file) => {
-          file.buffer = await sharp(file.buffer)
-            .resize(1920, 1920, {
-              fit: 'inside',
-              withoutEnlargement: true
-            })
-            .jpeg({ quality: 85, progressive: true, mozjpeg: true })
-            .toBuffer();
-          return file;
-        })
-      );
-    }
-
-    next();
-  } catch (error) {
-    next(error);
-  }
-};
+// Compression is handled inside uploadToCloudinary (so the stored asset is smaller).
+// Keep this middleware as a pass-through to avoid double-compressing.
+const compressImages = (req, res, next) => next();
 
 module.exports = upload;
 module.exports.compressImages = compressImages;

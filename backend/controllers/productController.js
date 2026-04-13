@@ -130,10 +130,10 @@ exports.createProduct = async (req, res, next) => {
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         try {
-          const imageUrl = await uploadToCloudinary(file.buffer, 'products');
+          const result = await uploadToCloudinary(file, 'products');
           
           uploadedImages.push({
-            url: imageUrl,
+            url: result.secure_url,
             alt: `${name} - Image ${uploadedImages.length + 1}`,
             isPrimary: uploadedImages.length === 0
           });
@@ -823,11 +823,11 @@ exports.updateProduct = async (req, res, next) => {
       // Upload new images
       const uploadedImages = [];
       for (const file of req.files) {
-        const result = await uploadToCloudinary(file.buffer, 'products');
+        const result = await uploadToCloudinary(file, 'products');
         uploadedImages.push({
           url: result.secure_url,
-          publicId: result.public_id,
-          alt: name || product.name
+          alt: name || product.name,
+          isPrimary: uploadedImages.length === 0
         });
       }
       updatedImages = uploadedImages;

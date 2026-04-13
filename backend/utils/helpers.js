@@ -2,66 +2,110 @@ const cloudinary = require('../config/cloudinary');
 const streamifier = require('streamifier');
 const sharp = require('sharp');
 
-// Compress and optimize image
+const normalizeUploadInput = (input) => {
+  if (Buffer.isBuffer(input)) {
+    return { buffer: input, mimetype: undefined, originalname: undefined };
+  }
+
+  if (input && Buffer.isBuffer(input.buffer)) {
+    return {
+      buffer: input.buffer,
+      mimetype: input.mimetype,
+      originalname: input.originalname
+    };
+  }
+
+  throw new Error('Invalid upload input: expected a Buffer or a multer file');
+};
+
+// Compress and optimize image BEFORE uploading to Cloudinary (to save storage space)
 exports.compressImage = async (fileBuffer, options = {}) => {
   const {
-    maxWidth = 1920,
-    maxHeight = 1920,
+    maxWidth = 1600,
+    maxHeight = 1600,
     quality = 80,
-    format = 'jpeg'
+    format = 'webp',
+    sourceMimeType
   } = options;
 
   try {
-    // Process image with sharp
-    const compressedBuffer = await sharp(fileBuffer)
+    // Preserve animated GIFs as-is (sharp would otherwise flatten to a single frame)
+    if (sourceMimeType === 'image/gif') {
+      const meta = await sharp(fileBuffer, { animated: true }).metadata();
+      if ((meta.pages || 1) > 1) {
+        return fileBuffer;
+      }
+      // non-animated GIFs can be converted safely
+    }
+
+    const img = sharp(fileBuffer)
+      .rotate()
       .resize(maxWidth, maxHeight, {
         fit: 'inside',
         withoutEnlargement: true
-      })
-      .toFormat(format, {
-        quality,
-        progressive: true,
-        mozjpeg: true // Use mozjpeg for better compression
-      })
-      .toBuffer();
+      });
 
-    return compressedBuffer;
+    if (format === 'webp') {
+      return await img.webp({ quality, effort: 4 }).toBuffer();
+    }
+
+    if (format === 'avif') {
+      return await img.avif({ quality, effort: 4 }).toBuffer();
+    }
+
+    if (format === 'png') {
+      return await img.png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer();
+    }
+
+    // jpeg fallback
+    return await img.jpeg({ quality, progressive: true, mozjpeg: true }).toBuffer();
   } catch (error) {
     console.error('Error compressing image:', error);
-    // Return original buffer if compression fails
     return fileBuffer;
   }
 };
 
-// Upload image to Cloudinary (with compression)
-exports.uploadToCloudinary = async (fileBuffer, folder = 'products', compress = true) => {
+// Upload image to Cloudinary (with pre-upload compression to save Cloudinary storage)
+// Accepts either a raw Buffer or a multer file object ({ buffer, mimetype, originalname }).
+// Returns the full Cloudinary upload result.
+exports.uploadToCloudinary = async (input, folder = 'products', compressOrOptions = true) => {
   try {
+    const { buffer: fileBuffer, mimetype } = normalizeUploadInput(input);
+
     let bufferToUpload = fileBuffer;
+
+    const compress = typeof compressOrOptions === 'boolean' ? compressOrOptions : true;
+    const overrideOptions =
+      typeof compressOrOptions === 'object' && compressOrOptions !== null ? compressOrOptions : {};
 
     // Compress image before uploading if enabled
     if (compress) {
-      // Different compression settings for different folders
       const compressionOptions = {
-        products: { maxWidth: 1920, maxHeight: 1920, quality: 85, format: 'jpeg' },
-        avatars: { maxWidth: 500, maxHeight: 500, quality: 80, format: 'jpeg' },
-        thumbnails: { maxWidth: 300, maxHeight: 300, quality: 75, format: 'jpeg' }
+        products: { maxWidth: 1600, maxHeight: 1600, quality: 80, format: 'webp' },
+        categories: { maxWidth: 800, maxHeight: 800, quality: 80, format: 'webp' },
+        avatars: { maxWidth: 500, maxHeight: 500, quality: 80, format: 'webp' },
+        thumbnails: { maxWidth: 300, maxHeight: 300, quality: 75, format: 'webp' }
       };
 
-      const options = compressionOptions[folder] || compressionOptions.products;
-      bufferToUpload = await exports.compressImage(fileBuffer, options);
+      const baseOptions = compressionOptions[folder] || compressionOptions.products;
+      bufferToUpload = await exports.compressImage(fileBuffer, {
+        ...baseOptions,
+        ...overrideOptions,
+        sourceMimeType: mimetype
+      });
     }
 
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: `chottola/${folder}`,
-          resource_type: 'auto'
+          resource_type: 'image'
         },
         (error, result) => {
           if (error) {
             reject(error);
           } else {
-            resolve(result.secure_url);
+            resolve(result);
           }
         }
       );
@@ -74,8 +118,17 @@ exports.uploadToCloudinary = async (fileBuffer, folder = 'products', compress = 
 };
 
 // Delete image from Cloudinary
-exports.deleteFromCloudinary = async (imageUrl) => {
+exports.deleteFromCloudinary = async (imageUrlOrImageObj) => {
   try {
+    const imageUrl =
+      typeof imageUrlOrImageObj === 'string'
+        ? imageUrlOrImageObj
+        : imageUrlOrImageObj?.url;
+
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      return;
+    }
+
     // Extract public_id from URL
     const urlParts = imageUrl.split('/');
     const publicIdWithExtension = urlParts[urlParts.length - 1];
