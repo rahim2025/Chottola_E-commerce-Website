@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Loader from '../components/common/Loader';
 import api from '../services/api';
 import { useCart } from '../hooks/useCart';
+import { applySeo } from '../utils/seo';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -19,6 +20,17 @@ const ProductDetail = () => {
   useEffect(() => {
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    if (!product) return;
+    applySeo({
+      title: `${product.name} | The Chattala`,
+      description: product.shortDescription || product.description?.slice(0, 160) || 'Product details at The Chattala.',
+      path: `/products/${id}`,
+      image: product.images?.[0]?.url || 'https://www.chattala.store/assets/images/chottola_logo.png',
+      type: 'product'
+    });
+  }, [product, id]);
 
   const fetchProduct = async () => {
     try {

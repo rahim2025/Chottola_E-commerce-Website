@@ -7,6 +7,7 @@ import { productService } from '../services/productService';
 import { categoryService } from '../services/categoryService';
 import { getApiUrl } from '../services/api';
 import { useCart } from '../hooks/useCart';
+import { applySeo } from '../utils/seo';
 import Loader from '../components/common/Loader';
 
 const Products = () => {
@@ -45,6 +46,15 @@ const Products = () => {
   }, [searchParams]);
 
   const [currentFilters, setCurrentFilters] = useState(initializeFilters);
+
+  useEffect(() => {
+    const qs = searchParams.toString();
+    applySeo({
+      title: 'Shop Products | The Chattala',
+      description: 'Browse imported foods, cosmetics and bakery products at The Chattala.',
+      path: qs ? `/products?${qs}` : '/products'
+    });
+  }, [searchParams]);
 
   // Fetch filter options on component mount
   useEffect(() => {

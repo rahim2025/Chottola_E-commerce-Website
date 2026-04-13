@@ -155,7 +155,7 @@ exports.createProduct = async (req, res, next) => {
       req.body?.discountPrice,
       req.body?.['pricing.discountPrice'],
       req.body?.['pricing["discountPrice"]']
-    ) ?? 0;
+    );
 
     if (price === undefined) {
       return res.status(400).json({
@@ -223,8 +223,8 @@ exports.createProduct = async (req, res, next) => {
       name,
       description,
       shortDescription: shortDescription || '',
-      price: price || 0,
-      discountPrice: discountPrice || 0,
+      price,
+      discountPrice: discountPrice ?? 0,
       discountPercentage,
       category,
       brand: brand || 'Unknown',
@@ -820,20 +820,33 @@ exports.updateProduct = async (req, res, next) => {
       updatedImages = uploadedImages;
     }
 
+    const toNumber = (value) => {
+      if (value === undefined || value === null || value === '') return undefined;
+      const num = Number(value);
+      return Number.isFinite(num) ? num : undefined;
+    };
+
+    const hasValue = (value) => value !== undefined && value !== null && value !== '';
+
+    const parsedPrice = toNumber(price);
+    const parsedDiscountPrice = toNumber(discountPrice);
+    const parsedDiscountPercentage = toNumber(discountPercentage);
+    const parsedWeightValue = toNumber(weight?.value);
+
     // Prepare update data
     const updateData = {
-      name: name || product.name,
-      description: description || product.description,
+      name: hasValue(name) ? name : product.name,
+      description: hasValue(description) ? description : product.description,
       shortDescription: shortDescription !== undefined ? shortDescription : product.shortDescription,
-      price: parseFloat(price) || product.price,
-      discountPrice: parseFloat(discountPrice) || 0,
-      discountPercentage: parseFloat(discountPercentage) || 0,
-      currency: currency || product.currency,
-      category: category || product.category,
-      brand: brand || product.brand,
+      price: parsedPrice !== undefined ? parsedPrice : product.price,
+      discountPrice: parsedDiscountPrice !== undefined ? parsedDiscountPrice : product.discountPrice,
+      discountPercentage: parsedDiscountPercentage !== undefined ? parsedDiscountPercentage : product.discountPercentage,
+      currency: hasValue(currency) ? currency : product.currency,
+      category: hasValue(category) ? category : product.category,
+      brand: hasValue(brand) ? brand : product.brand,
       weight: {
-        value: parseFloat(weight?.value) || product.weight?.value,
-        unit: weight?.unit || product.weight?.unit
+        value: parsedWeightValue !== undefined ? parsedWeightValue : product.weight?.value,
+        unit: hasValue(weight?.unit) ? weight.unit : product.weight?.unit
       },
       images: updatedImages,
       isActive: isActive !== undefined ? isActive : product.isActive,

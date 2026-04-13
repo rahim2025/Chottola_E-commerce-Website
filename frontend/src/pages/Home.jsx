@@ -5,6 +5,7 @@ import ProductCard from '../components/product/ProductCard';
 import { productService } from '../services/productService';
 import { categoryService } from '../services/categoryService';
 import { useCart } from '../hooks/useCart';
+import { applySeo } from '../utils/seo';
 import Loader from '../components/common/Loader';
 import { FaTruck, FaPercent, FaShieldAlt, FaClock } from 'react-icons/fa';
 
@@ -19,6 +20,11 @@ const Home = () => {
 
 
   useEffect(() => {
+    applySeo({
+      title: 'The Chattala - Imported Foods, Cosmetics & Bakery',
+      description: 'Shop imported foods, cosmetics and bakery essentials in Bangladesh with trusted quality and fast delivery.',
+      path: '/'
+    });
     fetchProducts();
     fetchCategories();
   }, []);

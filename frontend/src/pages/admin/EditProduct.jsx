@@ -181,15 +181,21 @@ const EditProduct = () => {
       });
 
       // Prepare update data
+      const toNumberOrUndefined = (value) => {
+        if (value === '' || value === null || value === undefined) return undefined;
+        const num = Number(value);
+        return Number.isFinite(num) ? num : undefined;
+      };
+
       const updateData = {
         ...formData,
         weight: {
-          value: parseFloat(formData.weight.value),
+          value: toNumberOrUndefined(formData.weight.value),
           unit: formData.weight.unit
         },
-        price: parseFloat(formData.price),
-        discountPrice: parseFloat(formData.discountPrice) || 0,
-        discountPercentage: parseFloat(formData.discountPercentage) || 0
+        price: toNumberOrUndefined(formData.price),
+        discountPrice: toNumberOrUndefined(formData.discountPrice),
+        discountPercentage: toNumberOrUndefined(formData.discountPercentage)
       };
 
       // If we're keeping existing images, add them
