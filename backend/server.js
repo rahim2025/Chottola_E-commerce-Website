@@ -36,7 +36,9 @@ app.use(securityHeaders);
 // Manual CORS headers for Vercel compatibility and local development
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  'https://chattala-frontend.vercel.app',
+  'https://www.chattala.store/',
+  'chattala.store',
+  'https://chattala.store',
   'http://localhost:5173',
 ].filter(Boolean);
 
