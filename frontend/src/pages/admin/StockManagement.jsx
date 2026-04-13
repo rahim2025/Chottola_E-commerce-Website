@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Loader from '../../components/common/Loader';
+import { getApiUrl } from '../../services/api';
 
 const StockManagement = () => {
   const { id } = useParams();
@@ -38,7 +39,7 @@ const StockManagement = () => {
       setLoading(true);
       
       // Fetch product details
-      const productResponse = await fetch(`/api/products/${id}`, {
+      const productResponse = await fetch(getApiUrl(`/products/${id}`), {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -52,7 +53,7 @@ const StockManagement = () => {
       setProduct(productData.data);
 
       // Fetch inventory details
-      const inventoryResponse = await fetch(`/api/products/${id}/inventory`, {
+      const inventoryResponse = await fetch(getApiUrl(`/products/${id}/inventory`), {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -90,7 +91,7 @@ const StockManagement = () => {
         updateData.batchInfo = stockForm.batchInfo;
       }
 
-      const response = await fetch(`/api/products/${id}/stock`, {
+      const response = await fetch(getApiUrl(`/products/${id}/stock`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

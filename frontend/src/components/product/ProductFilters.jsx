@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FaSearch, FaFilter, FaTimes, FaChevronDown, FaSlidersH } from 'react-icons/fa';
 import { useDebounce } from '../../hooks/useDebounce';
+import { getApiUrl } from '../../services/api';
 
 const ProductFilters = ({ 
   onFiltersChange, 
@@ -35,7 +36,7 @@ const ProductFilters = ({
     const fetchSuggestions = async () => {
       if (debouncedSearchTerm && debouncedSearchTerm.length >= 2) {
         try {
-          const response = await fetch(`/api/products/search/suggestions?q=${encodeURIComponent(debouncedSearchTerm)}`);
+          const response = await fetch(getApiUrl(`/products/search/suggestions?q=${encodeURIComponent(debouncedSearchTerm)}`));
           const data = await response.json();
           if (data.success) {
             setSuggestions(data.data);

@@ -1,8 +1,16 @@
 import axios from 'axios';
 
-// Use environment variable or fallback to production URL
-const API_URL = import.meta.env.VITE_API_URL || 
-  'https://chattala-backend.vercel.app/api';
+// Prefer explicit env; fallback to same-domain backend service on Vercel monorepo.
+const rawApiUrl =
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.PROD ? '/_/backend/api' : 'http://localhost:5000/api');
+
+export const API_URL = rawApiUrl.replace(/\/+$/, '');
+
+export const getApiUrl = (path = '') => {
+  if (!path) return API_URL;
+  return `${API_URL}${path.startsWith('/') ? path : `/${path}`}`;
+};
 
 const api = axios.create({
   baseURL: API_URL,

@@ -5,6 +5,7 @@ import ProductCard from '../components/product/ProductCard';
 import ProductFilters from '../components/product/ProductFilters';
 import { productService } from '../services/productService';
 import { categoryService } from '../services/categoryService';
+import { getApiUrl } from '../services/api';
 import { useCart } from '../hooks/useCart';
 import Loader from '../components/common/Loader';
 
@@ -64,7 +65,7 @@ const Products = () => {
         // Try to fetch other filter options from products API
         let brands = [];
         try {
-          const response = await fetch('/api/products/filters');
+          const response = await fetch(getApiUrl('/products/filters'));
           const data = await response.json();
           if (data.success) {
             brands = data.data.brands || [];
