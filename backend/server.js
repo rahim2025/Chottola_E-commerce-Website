@@ -35,32 +35,20 @@ app.use(securityHeaders);
 
 // Manual CORS headers for Vercel compatibility and local development
 const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'https://www.chattala.store/',
-  'chattala.store',
+  'https://www.chattala.store',
   'https://chattala.store',
-  'http://localhost:5173',
-].filter(Boolean);
+  'http://localhost:5173'
+];
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-
-  const isAllowedOrigin = origin && (allowedOrigins.length === 0 || allowedOrigins.includes(origin));
-
-  if (isAllowedOrigin) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-    res.header('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
-  }
-
-  // Let global CORS handler take care of origins we do not explicitly whitelist
-  if (req.method === 'OPTIONS' && isAllowedOrigin) {
-    return res.status(204).end();
-  }
-
-  next();
-});
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // CORS configuration (as backup)
 app.use(cors(corsOptions));
