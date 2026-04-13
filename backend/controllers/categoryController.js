@@ -50,6 +50,8 @@ exports.getAllForAdmin = async (req, res, next) => {
 // @access  Public
 exports.getCategories = async (req, res, next) => {
   try {
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+
     let query = {};
 
     // Filter by active status (default to active only)

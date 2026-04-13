@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { FaStar, FaShoppingCart, FaHeart } from 'react-icons/fa';
 
-const ProductCard = ({ product, onAddToCart }) => {
+const ProductCard = memo(({ product, onAddToCart }) => {
   const price = product.discountPrice || product.price;
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
   const ratingAverage = Number(product.ratings?.average ?? product.averageRating ?? 0);
@@ -30,6 +30,8 @@ const ProductCard = ({ product, onAddToCart }) => {
           <img
             src={product.images[0]?.url || '/placeholder.jpg'}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         </div>
@@ -93,6 +95,13 @@ const ProductCard = ({ product, onAddToCart }) => {
       </div>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Return true if props are equal (skip re-render), false otherwise
+  return prevProps.product._id === nextProps.product._id &&
+         prevProps.product.price === nextProps.product.price &&
+         prevProps.product.discountPrice === nextProps.product.discountPrice;
+});
+
+ProductCard.displayName = 'ProductCard';
 
 export default ProductCard;

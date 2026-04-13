@@ -107,7 +107,8 @@ exports.securityHeaders = helmet({
     maxAge: 31536000,
     includeSubDomains: true,
     preload: true
-  }
+  },
+  cacheControl: true
 });
 
 // Data sanitization middleware
@@ -252,6 +253,35 @@ function getSeverity(event) {
     'rate_limit_exceeded': 'low',
     'suspicious_activity': 'medium'
   };
-  
+
   return severityMap[event] || 'medium';
 }
+
+// Cache control middleware
+exports.cacheControl = (maxAge = 3600) => {
+  return (req, res, next) => {
+    res.set('Cache-Control', `public, max-age=${maxAge}`);
+    next();
+  };
+};
+
+// Cache control for API endpoints
+exports.setCacheHeaders = (req, res, next) => {
+  // Cache product listings for 10 minutes
+  if (req.path.includes('/products') && req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=600');
+  }
+  // Cache categories for 1 hour
+  else if (req.path.includes('/categories') && req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=3600');
+  }
+  // Don't cache user-specific data
+  else if (req.path.includes('/users') || req.path.includes('/orders') || req.path.includes('/cart')) {
+    res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+  }
+  // Default: no cache for API
+  else {
+    res.set('Cache-Control', 'private, no-cache, no-store, must-revalidate');
+  }
+  next();
+};

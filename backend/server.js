@@ -1,4 +1,5 @@
 const express = require('express');
+const compression = require('compression');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -11,7 +12,8 @@ const {
   sanitizeData,
   corsOptions,
   requestLogger,
-  createRateLimit
+  createRateLimit,
+  setCacheHeaders
 } = require('./middleware/security');
 
 // Load environment variables
@@ -24,6 +26,18 @@ const app = express();
 
 // Trust proxy (for rate limiting and IP detection behind load balancers)
 app.set('trust proxy', 1);
+
+// Enable response compression
+app.use(compression({
+  level: 6, // Balance between speed and compression ratio
+  threshold: 1024, // Only compress responses > 1KB
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
 
 // Request logging (in development)
 if (process.env.NODE_ENV === 'development') {
@@ -63,6 +77,9 @@ app.use(cookieParser());
 
 // Data sanitization
 app.use(sanitizeData);
+
+// Set cache headers for API responses
+app.use('/api', setCacheHeaders);
 
 // General API rate limiting
 const generalApiLimiter = createRateLimit({

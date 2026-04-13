@@ -280,6 +280,8 @@ exports.createProduct = async (req, res, next) => {
 };
 exports.getProducts = async (req, res, next) => {
   try {
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 12;
     const skip = (page - 1) * limit;
@@ -637,6 +639,8 @@ exports.getFilterOptions = async (req, res, next) => {
 // @access  Public
 exports.getSearchSuggestions = async (req, res, next) => {
   try {
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=300');
+
     const { q } = req.query;
     
     if (!q || q.trim().length < 2) {
@@ -728,6 +732,8 @@ exports.getSearchSuggestions = async (req, res, next) => {
 // @access  Public
 exports.getProduct = async (req, res, next) => {
   try {
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+
     const product = await Product.findById(req.params.id)
       .populate('category', 'name slug');
 
@@ -1077,6 +1083,8 @@ exports.bulkUpdateProducts = async (req, res, next) => {
 // @access  Public
 exports.getFeaturedProducts = async (req, res, next) => {
   try {
+    res.set('Cache-Control', 'public, max-age=60, s-maxage=300, stale-while-revalidate=600');
+
     const products = await Product.find({
       isActive: true,
       isFeatured: true
@@ -1088,6 +1096,50 @@ exports.getFeaturedProducts = async (req, res, next) => {
     res.status(200).json({
       success: true,
       data: products
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get home page data (featured, regular, and special offers in one call)
+// @route   GET /api/products/homepage
+// @access  Public
+exports.getHomePageData = async (req, res, next) => {
+  try {
+    res.set('Cache-Control', 'public, max-age=300, s-maxage=600, stale-while-revalidate=1800');
+
+    const [featured, regular, specialOffers] = await Promise.all([
+      Product.find({
+        isActive: true,
+        isFeatured: true
+      })
+        .populate('category', 'name slug')
+        .limit(12)
+        .lean(),
+      Product.find({
+        isActive: true,
+        isFeatured: false
+      })
+        .populate('category', 'name slug')
+        .limit(12)
+        .lean(),
+      Product.find({
+        isActive: true,
+        discountPrice: { $exists: true, $ne: null }
+      })
+        .populate('category', 'name slug')
+        .limit(8)
+        .lean()
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        featured,
+        regular,
+        specialOffers
+      }
     });
   } catch (error) {
     next(error);

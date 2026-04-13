@@ -125,6 +125,8 @@ const ProductDetail = () => {
             <img
               src={product.images[selectedImage]?.url || '/placeholder-product.png'}
               alt={product.images[selectedImage]?.alt || product.name}
+              loading="eager"
+              decoding="async"
               className="w-full h-96 object-contain"
             />
           </div>
@@ -140,11 +142,13 @@ const ProductDetail = () => {
                     selectedImage === index ? 'border-indigo-600' : 'border-gray-200'
                   }`}
                 >
-                  <img
-                    src={image.url}
-                    alt={image.alt}
-                    className="w-full h-full object-cover"
-                  />
+                    <img
+                      src={image.url}
+                      alt={image.alt}
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover"
+                    />
                 </button>
               ))}
             </div>

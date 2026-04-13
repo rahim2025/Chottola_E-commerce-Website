@@ -183,6 +183,8 @@ const ProductFilters = ({
                         <img
                           src={product.image}
                           alt={product.name}
+                          loading="lazy"
+                          decoding="async"
                           className="w-8 h-8 object-cover rounded"
                         />
                       )}

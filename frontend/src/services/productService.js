@@ -1,6 +1,12 @@
 import api from './api';
 
 export const productService = {
+  // Get home page data (featured, regular, special offers in one call)
+  getHomePageData: async () => {
+    const response = await api.get('/products/homepage');
+    return response.data;
+  },
+
   // Get all products with filters
   getProducts: async (params = {}) => {
     const response = await api.get('/products', { params });

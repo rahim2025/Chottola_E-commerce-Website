@@ -10,7 +10,8 @@ const {
   getAdminProducts,
   bulkUpdateProducts,
   getFilterOptions,
-  getSearchSuggestions
+  getSearchSuggestions,
+  getHomePageData
 } = require('../controllers/productController');
 const { protect } = require('../middleware/auth');
 const { requireAdmin, requireAdminPermission } = require('../middleware/admin');
@@ -21,6 +22,7 @@ const { createProductValidator, idValidator } = require('../utils/validators');
 // Public routes (must be before parameterized routes)
 router.get('/search/suggestions', getSearchSuggestions);
 router.get('/filters', getFilterOptions);
+router.get('/homepage', getHomePageData);
 router.get('/featured', getFeaturedProducts);
 router.get('/', getProducts);
 

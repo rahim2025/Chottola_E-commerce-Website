@@ -31,21 +31,20 @@ const Home = () => {
 
   const fetchProducts = async () => {
     try {
-      const [featuredResponse, regularResponse, specialOffersResponse] = await Promise.all([
-        productService.getFeaturedProducts(),
-        productService.getProducts({ limit: 12, featured: false }),
-        // Fetch products with discounts for special offers
-        productService.getProducts({ limit: 8, hasDiscount: true })
-      ]);
+      // Single API call to get all home page data
+      const response = await productService.getHomePageData();
 
-      const featured = Array.isArray(featuredResponse?.data) ? featuredResponse.data : [];
-      const regular = Array.isArray(regularResponse?.data) ? regularResponse.data : [];
-      const offers = Array.isArray(specialOffersResponse?.data) ? specialOffersResponse.data : [];
-
-      setFeaturedProducts(featured);
-      setRegularProducts(regular);
-      setSpecialOffers(offers);
+      if (response?.success && response?.data) {
+        setFeaturedProducts(Array.isArray(response.data.featured) ? response.data.featured : []);
+        setRegularProducts(Array.isArray(response.data.regular) ? response.data.regular : []);
+        setSpecialOffers(Array.isArray(response.data.specialOffers) ? response.data.specialOffers : []);
+      } else {
+        setFeaturedProducts([]);
+        setRegularProducts([]);
+        setSpecialOffers([]);
+      }
     } catch (error) {
+      console.error('Error fetching products:', error);
       toast.error('Failed to load products');
     } finally {
       setLoading(false);
@@ -174,6 +173,8 @@ const Home = () => {
                         <img
                           src={category.image.url}
                           alt={category.image.alt || category.name}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover rounded-lg"
                           onError={(e) => {
                             e.target.style.display = 'none';
@@ -302,6 +303,8 @@ const Home = () => {
                 <img 
                   src={product.images?.[0]?.url} 
                   alt={product.name}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-20 object-cover rounded-lg mb-3"
                 />
                 <h3 className="text-sm font-semibold text-text-primary mb-2 line-clamp-2">
