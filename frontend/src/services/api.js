@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-// Prefer explicit env; fallback to same-domain backend service on Vercel monorepo.
+// Prefer explicit env; fallback to deployed backend in production.
 const rawApiUrl =
   import.meta.env.VITE_API_URL ||
-  (import.meta.env.PROD ? '/_/backend/api' : 'http://localhost:5000/api');
+  (import.meta.env.PROD ? 'https://chattala-backend.vercel.app/api' : 'http://localhost:5000/api');
 
 export const API_URL = rawApiUrl.replace(/\/+$/, '');
 
