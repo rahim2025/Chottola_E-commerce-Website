@@ -39,10 +39,6 @@ const wishlistSchema = new mongoose.Schema({
       type: Number,
       min: 0
     },
-    inStock: {
-      type: Boolean,
-      default: true
-    },
     lastChecked: {
       type: Date,
       default: Date.now
@@ -78,7 +74,6 @@ const wishlistSchema = new mongoose.Schema({
     },
     emailNotifications: {
       priceDrops: { type: Boolean, default: true },
-      backInStock: { type: Boolean, default: true },
       discounts: { type: Boolean, default: true }
     },
     autoRemoveAfterPurchase: {
@@ -118,11 +113,6 @@ wishlistSchema.virtual('itemsWithPriceDrops').get(function() {
   return this.items.filter(item => 
     item.currentPrice && item.currentPrice < item.priceWhenAdded
   ).length;
-});
-
-// Virtual for out of stock items
-wishlistSchema.virtual('outOfStockItems').get(function() {
-  return this.items.filter(item => !item.inStock).length;
 });
 
 // Method to add item to wishlist
@@ -284,31 +274,6 @@ wishlistSchema.methods.addItemToCategory = function(categoryName, productId) {
   return this;
 };
 
-// Method to update stock status of items
-wishlistSchema.methods.updateStockStatus = async function() {
-  const Product = mongoose.model('Product');
-  const Inventory = mongoose.model('Inventory');
-  
-  for (const item of this.items) {
-    const inventory = await Inventory.findOne({ product: item.product });
-    if (inventory) {
-      const wasOutOfStock = !item.inStock;
-      item.inStock = inventory.availableStock > 0;
-      
-      // If item is back in stock and user wants notifications
-      if (wasOutOfStock && item.inStock && this.settings.emailNotifications.backInStock) {
-        // Trigger back in stock notification
-        // This would typically emit an event or add to a notification queue
-        console.log(`Item ${item.product} is back in stock for user ${this.user}`);
-      }
-      
-      item.lastChecked = new Date();
-    }
-  }
-  
-  return this.save();
-};
-
 // Method to update prices and check for drops
 wishlistSchema.methods.updatePrices = async function() {
   const Product = mongoose.model('Product');
@@ -348,11 +313,6 @@ wishlistSchema.methods.getItemsWithPriceDrops = function() {
   return this.items.filter(item => 
     item.currentPrice && item.currentPrice < item.priceWhenAdded
   );
-};
-
-// Method to get out of stock items
-wishlistSchema.methods.getOutOfStockItems = function() {
-  return this.items.filter(item => !item.inStock);
 };
 
 // Method to share wishlist (generate shareable link)

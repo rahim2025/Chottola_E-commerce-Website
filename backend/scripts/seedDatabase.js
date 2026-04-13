@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
-const Inventory = require('../models/Inventory');
 const config = require('../config/db');
 
 // Connect to MongoDB
@@ -84,7 +83,6 @@ const getProductsData = (categories) => {
       category: categories.find(c => c.slug === 'imported-foods')._id,
       brand: 'Anatolian Sweets',
       weight: { value: 500, unit: 'g' },
-      stock: 25,
       manufactureDate: now,
       expiryDate: futureDate,
       isFeatured: true,
@@ -133,7 +131,6 @@ const getProductsData = (categories) => {
       category: categories.find(c => c.slug === 'cosmetics')._id,
       brand: 'Luxe Paris',
       weight: { value: 80, unit: 'ml' },
-      stock: 15,
       manufactureDate: now,
       expiryDate: futureDate,
       isFeatured: true,
@@ -173,7 +170,6 @@ const getProductsData = (categories) => {
       category: categories.find(c => c.slug === 'imported-foods')._id,
       brand: 'Tokyo Gourmet',
       weight: { value: 100, unit: 'g' },
-      stock: 8,
       manufactureDate: now,
       expiryDate: futureDate,
       isFeatured: true,
@@ -219,7 +215,6 @@ const getProductsData = (categories) => {
       category: categories.find(c => c.slug === 'imported-foods')._id,
       brand: 'Alpine Chocolatier',
       weight: { value: 250, unit: 'g' },
-      stock: 20,
       manufactureDate: now,
       expiryDate: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000), // 3 months
       isFeatured: true,
@@ -259,7 +254,6 @@ const getProductsData = (categories) => {
       category: categories.find(c => c.slug === 'imported-foods')._id,
       brand: 'Bella Italia',
       weight: { value: 1000, unit: 'g' },
-      stock: 50,
       manufactureDate: now,
       expiryDate: futureDate,
       isFeatured: false,
@@ -302,7 +296,6 @@ const getProductsData = (categories) => {
       category: categories.find(c => c.slug === 'cosmetics')._id,
       brand: 'Seoul Beauty',
       weight: { value: 200, unit: 'g' },
-      stock: 35,
       manufactureDate: now,
       expiryDate: futureDate,
       isFeatured: false,
@@ -339,7 +332,6 @@ const getProductsData = (categories) => {
       category: categories.find(c => c.slug === 'bakery')._id,
       brand: 'The Chattala Bakery',
       weight: { value: 360, unit: 'g' },
-      stock: 12,
       manufactureDate: now,
       expiryDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000), // 3 days
       isFeatured: false,
@@ -377,7 +369,6 @@ const getProductsData = (categories) => {
       category: categories.find(c => c.slug === 'imported-foods')._id,
       brand: 'Bangkok Spice Co.',
       weight: { value: 200, unit: 'g' },
-      stock: 45,
       manufactureDate: now,
       expiryDate: new Date(now.getTime() + 18 * 30 * 24 * 60 * 60 * 1000), // 18 months
       isFeatured: false,
@@ -398,52 +389,6 @@ const getProductsData = (categories) => {
   ];
 };
 
-// Inventory data generator
-const generateInventory = (product) => ({
-  product: product._id,
-  sku: product.sku,
-  stock: {
-    current: Math.floor(Math.random() * 50) + 10, // 10-60 stock
-    reserved: Math.floor(Math.random() * 5), // 0-5 reserved
-    available: Math.floor(Math.random() * 50) + 10,
-    reorderLevel: Math.floor(Math.random() * 10) + 5, // 5-15 reorder level
-    maxStock: Math.floor(Math.random() * 50) + 100, // 100-150 max stock
-  },
-  pricing: {
-    costPrice: product.price * 0.7, // 70% of selling price as cost
-    sellingPrice: product.price,
-    discountPrice: product.discountPrice || 0,
-    margin: product.price * 0.3,
-    currency: 'BDT'
-  },
-  supplier: {
-    primary: {
-      name: `${product.brand} Supplier`,
-      contact: '+880-1XXX-XXXXXX',
-      email: `supplier@${product.brand.toLowerCase().replace(/\s+/g, '')}.com`,
-      address: `${product.origin.country}`,
-      leadTime: 7,
-      minimumOrder: 1
-    }
-  },
-  batches: [{
-    batchNumber: `B${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-    quantity: Math.floor(Math.random() * 30) + 10,
-    manufactureDate: product.manufactureDate,
-    expiryDate: product.expiryDate,
-    costPrice: product.price * 0.7,
-    status: 'fresh',
-    location: {
-      warehouse: 'Main Warehouse',
-      section: 'A',
-      shelf: Math.floor(Math.random() * 10) + 1,
-      position: Math.floor(Math.random() * 20) + 1
-    }
-  }],
-  lastRestocked: new Date(),
-  isActive: true
-});
-
 // Seed function
 const seedDatabase = async () => {
   try {
@@ -452,7 +397,6 @@ const seedDatabase = async () => {
     // Clear existing data
     await Product.deleteMany({});
     await Category.deleteMany({});
-    await Inventory.deleteMany({});
     console.log('Cleared existing data');
 
     // Seed categories
@@ -464,17 +408,11 @@ const seedDatabase = async () => {
     const products = await Product.insertMany(productsData);
     console.log(`Seeded ${products.length} products`);
 
-    // Seed inventory for each product
-    const inventoryData = products.map(product => generateInventory(product));
-    const inventory = await Inventory.insertMany(inventoryData);
-    console.log(`Seeded ${inventory.length} inventory records`);
-
     console.log('Database seeding completed successfully!');
     console.log('Summary:');
     console.log(`- Categories: ${categories.length}`);
     console.log(`- Products: ${products.length}`);
     console.log(`- Featured Products: ${products.filter(p => p.isFeatured).length}`);
-    console.log(`- Inventory Records: ${inventory.length}`);
     
   } catch (error) {
     console.error('Error seeding database:', error);
@@ -490,7 +428,6 @@ const clearDatabase = async () => {
     console.log('Clearing database...');
     await Product.deleteMany({});
     await Category.deleteMany({});
-    await Inventory.deleteMany({});
     console.log('Database cleared successfully!');
   } catch (error) {
     console.error('Error clearing database:', error);

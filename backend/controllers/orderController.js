@@ -1,7 +1,5 @@
 const Order = require('../models/Order');
-const Product = require('../models/Product');
 const Cart = require('../models/Cart');
-const Inventory = require('../models/Inventory');
 const { validationResult } = require('express-validator');
 const mongoose = require('mongoose');
 const { sendOrderConfirmation, sendOrderStatusUpdate } = require('../utils/emailService');
@@ -37,7 +35,7 @@ exports.createOrder = async (req, res, next) => {
       });
     }
 
-    // Validate stock availability and prepare order items
+    // Validate product availability and prepare order items
     const orderItems = [];
     
     for (const cartItem of cart.items) {
@@ -47,14 +45,6 @@ exports.createOrder = async (req, res, next) => {
         return res.status(400).json({
           success: false,
           message: `Product ${product?.name || 'unknown'} is no longer available`
-        });
-      }
-
-      // Check product stock
-      if (product.stock < cartItem.quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `Insufficient stock for ${product.name}. Available: ${product.stock}, Required: ${cartItem.quantity}`
         });
       }
 
@@ -118,15 +108,6 @@ exports.createOrder = async (req, res, next) => {
     }], { session });
 
     const createdOrder = order[0];
-
-    // Update product stock
-    for (const cartItem of cart.items) {
-      await Product.findByIdAndUpdate(
-        cartItem.product._id,
-        { $inc: { stock: -cartItem.quantity } },
-        { session }
-      );
-    }
 
     // Clear the cart
     await cart.clearCart();

@@ -17,11 +17,6 @@ const ProductCard = ({ product, onAddToCart }) => {
             -{Math.round((1 - product.discountPrice / product.price) * 100)}%
           </span>
         )}
-        {product.stock < 10 && product.stock > 0 && (
-            <span className="bg-accent-500 text-white text-[9px] font-bold px-1 py-0.5 rounded shadow-sm">
-            Low Stock
-          </span>
-        )}
       </div>
 
       {/* Wishlist Button */}
@@ -87,35 +82,13 @@ const ProductCard = ({ product, onAddToCart }) => {
           )}
         </div>
 
-        {/* Stock Status */}
-        <div className="mb-1.5">
-          <span className={`text-[10px] sm:text-xs font-medium ${
-            product.stock > 10 
-              ? 'text-primary-600' 
-              : product.stock > 0 
-                ? 'text-accent-600' 
-                : 'text-danger-600'
-          }`}>
-            {product.stock > 10
-              ? 'In Stock'
-              : product.stock > 0
-                ? `${product.stock} left`
-                : 'Out of Stock'}
-          </span>
-        </div>
-
         {/* Add to Cart Button */}
         <button
           onClick={() => onAddToCart(product)}
-          disabled={product.stock === 0}
-          className={`w-full flex items-center justify-center space-x-1 py-1.5 px-2 rounded-md font-medium transition-all duration-300 ${
-            product.stock === 0
-              ? 'bg-gray-100 text-text-muted cursor-not-allowed'
-              : 'bg-accent-500 hover:bg-accent-600 text-white shadow-sm hover:shadow-md transform hover:-translate-y-0.5'
-          }`}
+          className="w-full flex items-center justify-center space-x-1 py-1.5 px-2 rounded-md font-medium transition-all duration-300 bg-accent-500 hover:bg-accent-600 text-white shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
         >
           <FaShoppingCart className="text-[10px] sm:text-xs" />
-          <span className="text-[10px] sm:text-xs">{product.stock === 0 ? 'Out' : 'Add'}</span>
+          <span className="text-[10px] sm:text-xs">Add</span>
         </button>
       </div>
     </div>

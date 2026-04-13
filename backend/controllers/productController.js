@@ -1,6 +1,5 @@
 const Product = require('../models/Product');
 const Category = require('../models/Category');
-const Inventory = require('../models/Inventory');
 const { validationResult } = require('express-validator');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/helpers');
 const mongoose = require('mongoose');
@@ -75,9 +74,7 @@ exports.createProduct = async (req, res, next) => {
       allergens,
       certifications,
       isActive,
-      isFeatured,
-      // Inventory data
-      initialStock
+      isFeatured
     } = parsedBody;
 
     const weight = typeof weightRaw === 'string' ? deepParse(weightRaw) : (weightRaw || {});
@@ -106,7 +103,6 @@ exports.createProduct = async (req, res, next) => {
     console.log('Parsed weight:', weight);
     console.log('Parsed allergens:', allergens);
     console.log('Parsed certifications:', certifications);
-    console.log('Initial stock:', initialStock);
 
     // Require at least one image
     if (!req.files || req.files.length === 0) {
@@ -239,8 +235,6 @@ exports.createProduct = async (req, res, next) => {
       expiryDate,
       manufactureDate,
       images: uploadedImages,
-      stock: parseInt(initialStock) || 0,
-      lowStockThreshold: 10,
       isActive: isActive !== undefined ? isActive : true,
       isFeatured: isFeatured || false,
       allergens: mappedAllergens,
@@ -369,11 +363,6 @@ exports.getProducts = async (req, res, next) => {
       matchQuery.$and.push({ $expr: { $and: priceConditions } });
     }
 
-    // Filter by stock availability
-    if (req.query.inStock === 'true') {
-      matchQuery.stock = { $gt: 0 };
-    }
-
     // Filter by featured products
     if (req.query.featured === 'true') {
       matchQuery.isFeatured = true;
@@ -493,7 +482,6 @@ exports.getProducts = async (req, res, next) => {
         discountPercentage: 1,
         brand: 1,
         images: { $slice: ["$images", 1] }, // Only return first image for list view
-        stock: 1,
         ratings: 1,
         averageRating: 1,
         totalReviews: 1,
@@ -811,8 +799,7 @@ exports.updateProduct = async (req, res, next) => {
       allergens,
       certifications,
       isActive,
-      isFeatured,
-      stock
+      isFeatured
     } = parsedBody;
 
     const weight = typeof weightRaw === 'string' ? deepParse(weightRaw) : (weightRaw || {});
@@ -849,7 +836,6 @@ exports.updateProduct = async (req, res, next) => {
         unit: weight?.unit || product.weight?.unit
       },
       images: updatedImages,
-      stock: parseInt(stock) !== undefined ? parseInt(stock) : product.stock,
       isActive: isActive !== undefined ? isActive : product.isActive,
       isFeatured: isFeatured !== undefined ? isFeatured : product.isFeatured,
       allergens: allergens || product.allergens,
@@ -963,7 +949,6 @@ exports.getAdminProducts = async (req, res, next) => {
       sort = { createdAt: -1 };
     }
 
-    // Execute query with inventory data
     const products = await Product.find(query)
       .populate('category', 'name slug')
       .populate('createdBy', 'name email')
@@ -973,34 +958,13 @@ exports.getAdminProducts = async (req, res, next) => {
       .limit(limit)
       .lean();
 
-    // Get inventory data for each product
-    const productIds = products.map(p => p._id);
-    const inventories = await Inventory.find({ product: { $in: productIds } })
-      .select('product stock batches alerts')
-      .lean();
-
-    // Merge inventory data with products
-    const enrichedProducts = products.map(product => {
-      const inventory = inventories.find(inv => inv.product.toString() === product._id.toString());
-      return {
-        ...product,
-        inventory: inventory ? {
-          stock: inventory.stock,
-          batchCount: inventory.batches?.length || 0,
-          hasAlerts: inventory.alerts?.some(alert => alert.isActive) || false,
-          stockStatus: inventory.stock?.current <= 0 ? 'out_of_stock' : 
-                      inventory.stock?.current <= inventory.stock?.reorderLevel ? 'low_stock' : 'in_stock'
-        } : null
-      };
-    });
-
     // Get total count for pagination
     const totalProducts = await Product.countDocuments(query);
     const totalPages = Math.ceil(totalProducts / limit);
 
     res.status(200).json({
       success: true,
-      data: enrichedProducts,
+      data: products,
       pagination: {
         currentPage: page,
         totalPages,
@@ -1015,215 +979,6 @@ exports.getAdminProducts = async (req, res, next) => {
   }
 };
 
-// @desc    Update product stock (Admin only)
-// @route   PUT /api/products/:id/stock
-// @access  Private/Admin
-exports.updateProductStock = async (req, res, next) => {
-  try {
-    const { id: productId } = req.params;
-    const { action, quantity, reason, batchInfo } = req.body;
-
-    if (!['add', 'reduce', 'set'].includes(action)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid action. Must be "add", "reduce", or "set"'
-      });
-    }
-
-    if (!quantity || quantity <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Quantity must be a positive number'
-      });
-    }
-
-    // Find product and inventory
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    let inventory = await Inventory.findOne({ product: productId });
-    if (!inventory) {
-      return res.status(404).json({
-        success: false,
-        message: 'Inventory record not found for this product'
-      });
-    }
-
-    const oldStock = inventory.stock.current;
-    let newStock;
-
-    switch (action) {
-      case 'add':
-        newStock = oldStock + quantity;
-        // Add new batch if batch info provided
-        if (batchInfo) {
-          inventory.batches.push({
-            batchNumber: batchInfo.batchNumber || `BATCH-${Date.now()}`,
-            manufactureDate: batchInfo.manufactureDate || new Date(),
-            expiryDate: batchInfo.expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-            quantity: quantity,
-            costPrice: batchInfo.costPrice || inventory.pricing.costPrice,
-            qualityCheck: {
-              passed: true,
-              checkedBy: req.user.name,
-              checkDate: new Date()
-            }
-          });
-        }
-        break;
-        
-      case 'reduce':
-        if (quantity > oldStock) {
-          return res.status(400).json({
-            success: false,
-            message: `Cannot reduce stock by ${quantity}. Current stock is ${oldStock}`
-          });
-        }
-        newStock = oldStock - quantity;
-        // Use FIFO method to reduce from oldest batches
-        inventory.batches = inventory.batches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-        let remainingToReduce = quantity;
-        for (let batch of inventory.batches) {
-          if (remainingToReduce <= 0) break;
-          if (batch.quantity > 0) {
-            const reduceFromBatch = Math.min(batch.quantity, remainingToReduce);
-            batch.quantity -= reduceFromBatch;
-            remainingToReduce -= reduceFromBatch;
-          }
-        }
-        break;
-        
-      case 'set':
-        newStock = quantity;
-        // Reset batches with single batch
-        inventory.batches = [{
-          batchNumber: batchInfo?.batchNumber || `BATCH-${Date.now()}`,
-          manufactureDate: batchInfo?.manufactureDate || new Date(),
-          expiryDate: batchInfo?.expiryDate || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-          quantity: newStock,
-          costPrice: batchInfo?.costPrice || inventory.pricing.costPrice,
-          qualityCheck: {
-            passed: true,
-            checkedBy: req.user.name,
-            checkDate: new Date()
-          }
-        }];
-        break;
-    }
-
-    // Update inventory
-    inventory.stock.current = newStock;
-    
-    // Add movement record
-    inventory.movements.push({
-      type: action === 'add' ? 'in' : action === 'reduce' ? 'out' : 'adjustment',
-      quantity: action === 'set' ? Math.abs(newStock - oldStock) : quantity,
-      reason: reason || `Stock ${action} by admin`,
-      reference: `ADMIN-${Date.now()}`,
-      date: new Date(),
-      user: req.user._id,
-      notes: `Stock ${action}: ${oldStock} -> ${newStock}`
-    });
-
-    // Check for alerts
-    if (newStock <= inventory.stock.reorderLevel && newStock > 0) {
-      inventory.alerts.push({
-        type: 'low_stock',
-        message: `Stock is low: ${newStock} units remaining`,
-        severity: 'medium',
-        isActive: true
-      });
-    } else if (newStock === 0) {
-      inventory.alerts.push({
-        type: 'out_of_stock',
-        message: 'Product is out of stock',
-        severity: 'high',
-        isActive: true
-      });
-    }
-
-    await inventory.save();
-
-    // Update product's lastRestockDate if stock was added
-    if (action === 'add' || (action === 'set' && newStock > oldStock)) {
-      product.lastRestockDate = new Date();
-      await product.save();
-    }
-
-    res.status(200).json({
-      success: true,
-      message: `Stock ${action}ed successfully`,
-      data: {
-        productId,
-        productName: product.name,
-        oldStock,
-        newStock,
-        stockChange: newStock - oldStock,
-        action,
-        stockStatus: newStock <= 0 ? 'out_of_stock' : 
-                    newStock <= inventory.stock.reorderLevel ? 'low_stock' : 'in_stock'
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get product inventory details (Admin only)
-// @route   GET /api/products/:id/inventory
-// @access  Private/Admin
-exports.getProductInventory = async (req, res, next) => {
-  try {
-    const { id: productId } = req.params;
-    
-    const product = await Product.findById(productId).select('name sku');
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: 'Product not found'
-      });
-    }
-
-    const inventory = await Inventory.findOne({ product: productId })
-      .populate('movements.user', 'name email')
-      .populate('alerts.resolvedBy', 'name email');
-      
-    if (!inventory) {
-      return res.status(404).json({
-        success: false,
-        message: 'Inventory record not found'
-      });
-    }
-
-    // Calculate additional stats
-    const stats = {
-      availableStock: inventory.stock.current - inventory.stock.reserved,
-      stockValue: inventory.stock.current * inventory.pricing.sellingPrice,
-      activeBatches: inventory.batches.filter(batch => batch.quantity > 0).length,
-      expiringBatches: inventory.batches.filter(batch => 
-        new Date(batch.expiryDate) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      ).length,
-      recentMovements: inventory.movements.slice(-10),
-      activeAlerts: inventory.alerts.filter(alert => alert.isActive).length
-    };
-
-    res.status(200).json({
-      success: true,
-      data: {
-        product: product,
-        inventory: inventory,
-        stats: stats
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 
 // @desc    Bulk update products (Admin only)
 // @route   PUT /api/products/bulk-update

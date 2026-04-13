@@ -22,7 +22,6 @@ const ProductFilters = ({
     minPrice: initialFilters.minPrice || '',
     maxPrice: initialFilters.maxPrice || '',
     sort: initialFilters.sort || 'newest',
-    inStock: initialFilters.inStock || false,
     minRating: initialFilters.minRating || '',
     featured: initialFilters.featured || false
   });
@@ -126,7 +125,6 @@ const ProductFilters = ({
       minPrice: '',
       maxPrice: '',
       sort: 'newest',
-      inStock: false,
       minRating: '',
       featured: false
     });
@@ -138,7 +136,6 @@ const ProductFilters = ({
     if (filters.category.length > 0) count++;
     if (filters.brand.length > 0) count++;
     if (filters.minPrice || filters.maxPrice) count++;
-    if (filters.inStock) count++;
     if (filters.minRating) count++;
     if (filters.featured) count++;
     return count;
@@ -366,16 +363,6 @@ const ProductFilters = ({
           <div>
             <h4 className="font-medium text-gray-900 mb-3">Options</h4>
             <div className="space-y-3">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filters.inStock}
-                  onChange={(e) => handleFilterChange('inStock', e.target.checked)}
-                  className="rounded text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="text-sm text-gray-700">In Stock Only</span>
-              </label>
-
               <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="checkbox"

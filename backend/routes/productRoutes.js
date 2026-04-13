@@ -8,8 +8,6 @@ const {
   deleteProduct,
   getFeaturedProducts,
   getAdminProducts,
-  updateProductStock,
-  getProductInventory,
   bulkUpdateProducts,
   getFilterOptions,
   getSearchSuggestions
@@ -70,22 +68,6 @@ router.delete(
   requireAdminPermission('product_delete'),
   idValidator,
   deleteProduct
-);
-
-router.put(
-  '/:id/stock',
-  protect,
-  requireAdminPermission('inventory_management'),
-  idValidator,
-  updateProductStock
-);
-
-router.get(
-  '/:id/inventory',
-  protect,
-  requireAdminPermission('inventory_view'),
-  idValidator,
-  getProductInventory
 );
 
 module.exports = router;

@@ -36,7 +36,6 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminCategories from './pages/admin/AdminCategories';
 import AddProduct from './pages/admin/AddProduct';
 import EditProduct from './pages/admin/EditProduct';
-import StockManagement from './pages/admin/StockManagement';
 import SystemSettings from './pages/admin/SystemSettings';
 
 function App() {
@@ -84,7 +83,6 @@ function App() {
             <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
             <Route path="/admin/products/add" element={<AdminRoute><AddProduct /></AdminRoute>} />
             <Route path="/admin/products/edit/:id" element={<AdminRoute><EditProduct /></AdminRoute>} />
-            <Route path="/admin/products/:id/stock" element={<AdminRoute><StockManagement /></AdminRoute>} />
             <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
             <Route path="/admin/orders/:id" element={<AdminRoute><AdminOrderDetail /></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminUsers /></AdminRoute>} />

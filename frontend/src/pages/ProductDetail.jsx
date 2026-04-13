@@ -49,9 +49,7 @@ const ProductDetail = () => {
   };
 
   const incrementQuantity = () => {
-    if (quantity < product.stock) {
-      setQuantity(quantity + 1);
-    }
+    setQuantity(quantity + 1);
   };
 
   const decrementQuantity = () => {
@@ -197,15 +195,6 @@ const ProductDetail = () => {
             </div>
           </div>
 
-          {/* Stock Status */}
-          <div className="mb-6">
-            {product.stock > 0 ? (
-              <span className="text-green-600 font-medium">In Stock</span>
-            ) : (
-              <span className="text-red-600 font-medium">Out of Stock</span>
-            )}
-          </div>
-
           {/* Weight */}
           {product.weight && (
             <div className="mb-6">
@@ -216,33 +205,30 @@ const ProductDetail = () => {
           )}
 
           {/* Quantity Selector */}
-          {product.stock > 0 && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={decrementQuantity}
-                  className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
-                >
-                  -
-                </button>
-                <span className="text-xl font-medium w-12 text-center">{quantity}</span>
-                <button
-                  onClick={incrementQuantity}
-                  disabled={quantity >= product.stock}
-                  className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  +
-                </button>
-              </div>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={decrementQuantity}
+                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+              >
+                -
+              </button>
+              <span className="text-xl font-medium w-12 text-center">{quantity}</span>
+              <button
+                onClick={incrementQuantity}
+                className="w-10 h-10 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-100"
+              >
+                +
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Add to Cart Button */}
           <div className="flex gap-4 mb-8">
             <button
               onClick={handleAddToCart}
-              disabled={product.stock === 0 || addingToCart}
+              disabled={addingToCart}
               className="flex-1 bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {addingToCart ? 'Adding...' : 'Add to Cart'}
@@ -251,7 +237,6 @@ const ProductDetail = () => {
               onClick={() => {
                 handleAddToCart();
               }}
-              disabled={product.stock === 0}
               className="px-6 py-3 border border-indigo-600 text-indigo-600 rounded-lg font-medium hover:bg-indigo-50 disabled:border-gray-400 disabled:text-gray-400 disabled:cursor-not-allowed"
             >
               Buy Now

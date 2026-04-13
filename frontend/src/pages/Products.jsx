@@ -38,7 +38,6 @@ const Products = () => {
     if (searchParams.get('minPrice')) filters.minPrice = searchParams.get('minPrice');
     if (searchParams.get('maxPrice')) filters.maxPrice = searchParams.get('maxPrice');
     if (searchParams.get('sort')) filters.sort = searchParams.get('sort');
-    if (searchParams.get('inStock')) filters.inStock = searchParams.get('inStock') === 'true';
     if (searchParams.get('featured')) filters.featured = searchParams.get('featured') === 'true';
     if (searchParams.get('minRating')) filters.minRating = searchParams.get('minRating');
 

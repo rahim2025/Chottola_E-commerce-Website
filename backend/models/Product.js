@@ -76,17 +76,6 @@ const productSchema = new mongoose.Schema({
       default: false
     }
   }],
-  stock: {
-    type: Number,
-    required: [true, 'Please provide stock quantity'],
-    min: [0, 'Stock cannot be negative'],
-    default: 0
-  },
-  lowStockThreshold: {
-    type: Number,
-    default: 10,
-    min: [0, 'Low stock threshold cannot be negative']
-  },
   isActive: {
     type: Boolean,
     default: true
@@ -138,13 +127,6 @@ productSchema.virtual('finalPrice').get(function() {
   return this.discountPrice > 0 ? this.discountPrice : this.price;
 });
 
-// Virtual for stock status
-productSchema.virtual('stockStatus').get(function() {
-  if (this.stock === 0) return 'out-of-stock';
-  if (this.stock <= this.lowStockThreshold) return 'low-stock';
-  return 'in-stock';
-});
-
 // Virtual for checking if product is expired
 productSchema.virtual('isExpired').get(function() {
   return this.expiryDate < new Date();
@@ -178,6 +160,4 @@ productSchema.index({ createdAt: -1 });
 productSchema.index({ averageRating: -1 });
 productSchema.index({ totalPurchases: -1 });
 productSchema.index({ isFeatured: -1, isActive: 1 });
-productSchema.index({ stock: 1, isActive: 1 });
-
 module.exports = mongoose.model('Product', productSchema);

@@ -1,6 +1,5 @@
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
-const Inventory = require('../models/Inventory');
 const { validationResult } = require('express-validator');
 
 // @desc    Get user's cart
@@ -60,14 +59,6 @@ exports.addToCart = async (req, res, next) => {
       });
     }
 
-    // Check product stock availability
-    if (product.stock < quantity) {
-      return res.status(400).json({
-        success: false,
-        message: `Only ${product.stock} items available in stock`
-      });
-    }
-
     // Get or create cart
     let cart = await Cart.findOne({ user: req.user._id, isActive: true });
     if (!cart) {
@@ -120,17 +111,6 @@ exports.updateCartItem = async (req, res, next) => {
         success: false,
         message: 'Cart not found'
       });
-    }
-
-    // Check product stock if increasing quantity
-    if (quantity > 0) {
-      const product = await Product.findById(productId);
-      if (product && product.stock < quantity) {
-        return res.status(400).json({
-          success: false,
-          message: `Only ${product.stock} items available in stock`
-        });
-      }
     }
 
     // Update item quantity
@@ -314,18 +294,12 @@ exports.syncCart = async (req, res, next) => {
       if (item._id && item.quantity > 0) {
         const product = await Product.findById(item._id);
         if (product && product.isActive) {
-          // Check product stock
-          const availableStock = product.stock || 0;
-          const quantityToAdd = Math.min(item.quantity, availableStock);
-          
-          if (quantityToAdd > 0) {
-            cart.items.push({
-              product: item._id,
-              quantity: quantityToAdd,
-              price: product.price,
-              discountPrice: product.discountPrice || 0
-            });
-          }
+          cart.items.push({
+            product: item._id,
+            quantity: item.quantity,
+            price: product.price,
+            discountPrice: product.discountPrice || 0
+          });
         }
       }
     }
