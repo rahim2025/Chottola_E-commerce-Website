@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Use environment variable or fallback to production URL
 const API_URL = import.meta.env.VITE_API_URL || 
-  'https://chottola-e-commerce-website-backend.vercel.app/api';
+  'https://chattala-backend.vercel.app/api';
 
 const api = axios.create({
   baseURL: API_URL,
