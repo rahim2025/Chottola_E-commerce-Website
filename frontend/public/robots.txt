@@ -1,4 +1,51 @@
+# Allow all bots to crawl the site
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /auth/
+Disallow: /checkout/
+Disallow: /cart/
+Disallow: /orders/
+Disallow: /profile/
+Disallow: /api/
+Disallow: /*.json$
+Disallow: /*.xml$
+Disallow: /node_modules/
 
+# Crawl delay for all bots
+Crawl-delay: 1
+
+# Request rate
+Request-rate: 30/1m
+
+# Specific rules for Google
+User-agent: Googlebot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Crawl-delay: 0
+Request-rate: 100/1m
+
+# Specific rules for Bing
+User-agent: Bingbot
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Crawl-delay: 1
+Request-rate: 30/1m
+
+# Block bad bots
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Crawl-delay: 10
+
+# Sitemap location
 Sitemap: https://www.chattala.store/sitemap.xml
+
+# Primary domain
+Host: https://www.chattala.store

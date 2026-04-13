@@ -28,7 +28,15 @@ const ProductDetail = () => {
       description: product.shortDescription || product.description?.slice(0, 160) || 'Product details at The Chattala.',
       path: `/products/${id}`,
       image: product.images?.[0]?.url || 'https://www.chattala.store/assets/images/chottola_logo.png',
-      type: 'product'
+      type: 'product',
+      keywords: `${product.name}, ${product.category?.name || 'products'}, buy online, Bangladesh, delivery`,
+      product: product,
+      breadcrumbs: [
+        { name: 'Home', path: '/' },
+        { name: 'Products', path: '/products' },
+        { name: product.category?.name || 'Category', path: `/products?category=${product.category?.slug || ''}` },
+        { name: product.name, path: `/products/${id}` }
+      ]
     });
   }, [product, id]);
 

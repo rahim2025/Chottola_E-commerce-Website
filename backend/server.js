@@ -125,7 +125,7 @@ app.use('/api/reviews', require('./routes/reviewRoutes'));
 app.get('/api/health', (req, res) => {
   const uptime = process.uptime();
   const memoryUsage = process.memoryUsage();
-  
+
   res.status(200).json({
     success: true,
     message: 'Server is running',
@@ -141,6 +141,69 @@ app.get('/api/health', (req, res) => {
       version: process.env.npm_package_version || '1.0.0'
     }
   });
+});
+
+// Dynamic sitemap for SEO
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    res.set('Content-Type', 'application/xml; charset=utf-8');
+
+    const Product = require('./models/Product');
+
+    // Get all active products for product URLs
+    const products = await Product.find({ isActive: true })
+      .select('_id updatedAt')
+      .lean()
+      .limit(50000); // Google sitemap limit
+
+    const baseUrl = process.env.FRONTEND_URL || 'https://www.chattala.store';
+
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';
+    xml += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+
+    // Static pages
+    const staticPages = [
+      { url: '/', priority: 1.0, changefreq: 'daily' },
+      { url: '/products', priority: 0.9, changefreq: 'daily' },
+      { url: '/products?featured=true', priority: 0.7, changefreq: 'daily' },
+      { url: '/products?category=fresh-produce', priority: 0.8, changefreq: 'daily' },
+      { url: '/products?category=dairy-eggs', priority: 0.8, changefreq: 'daily' },
+      { url: '/products?category=bakery', priority: 0.8, changefreq: 'daily' },
+      { url: '/products?category=meat-seafood', priority: 0.8, changefreq: 'daily' },
+      { url: '/products?category=snacks-beverages', priority: 0.8, changefreq: 'daily' },
+      { url: '/products?category=personal-care', priority: 0.8, changefreq: 'daily' },
+    ];
+
+    staticPages.forEach(page => {
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}${page.url}</loc>\n`;
+      xml += `    <lastmod>${new Date().toISOString().split('T')[0]}</lastmod>\n`;
+      xml += `    <changefreq>${page.changefreq}</changefreq>\n`;
+      xml += `    <priority>${page.priority}</priority>\n`;
+      xml += `  </url>\n`;
+    });
+
+    // Product pages
+    products.forEach(product => {
+      const lastmod = product.updatedAt ? product.updatedAt.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}/products/${product._id}</loc>\n`;
+      xml += `    <lastmod>${lastmod}</lastmod>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.6</priority>\n`;
+      xml += `  </url>\n`;
+    });
+
+    xml += '</urlset>';
+
+    res.send(xml);
+  } catch (error) {
+    console.error('Sitemap generation error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error generating sitemap'
+    });
+  }
 });
 
 // 404 handler for API routes

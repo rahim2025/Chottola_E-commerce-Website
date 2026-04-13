@@ -2,29 +2,93 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- SEO & Search Engine Tags -->
+    <meta name="description" content="The Chattala - Buy imported foods, cosmetics and bakery essentials in Bangladesh with fast delivery and trusted quality." />
+    <meta name="keywords" content="imported foods Bangladesh, cosmetics online, bakery products, grocery delivery Dhaka, organic products, personal care, fast delivery" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow" />
+    <meta name="revisit-after" content="7 days" />
+    <meta name="author" content="The Chattala" />
+    <meta name="rating" content="general" />
+
+    <!-- Language & Alternates -->
+    <meta http-equiv="content-language" content="en-US" />
+    <link rel="alternate" hreflang="en" href="https://www.chattala.store/" />
+    <link rel="alternate" hreflang="bn" href="https://www.chattala.store/bn" />
+
+    <!-- Mobile & App -->
     <link rel="icon" type="image/png" href="/assets/images/chottola_logo.png" />
+    <link rel="apple-touch-icon" href="/assets/images/chottola_logo.png" />
     <meta name="theme-color" content="#22c55e" />
-    <meta
-      name="description"
-      content="The Chattala - Buy imported foods, cosmetics and bakery essentials in Bangladesh with fast delivery and trusted quality."
-    />
-    <meta name="robots" content="index,follow" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="The Chattala" />
+    <meta name="application-name" content="The Chattala" />
+    <meta name="msapplication-TileColor" content="#22c55e" />
+    <meta name="msapplication-TileImage" content="/assets/images/chottola_logo.png" />
+
+    <!-- Open Graph (Social Sharing) -->
     <meta property="og:site_name" content="The Chattala" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="The Chattala - Imported Foods, Cosmetics & Bakery" />
-    <meta property="og:description" content="Shop imported foods, cosmetics and bakery essentials at The Chattala." />
+    <meta property="og:description" content="Shop imported foods, cosmetics and bakery essentials at The Chattala with fast delivery." />
     <meta property="og:url" content="https://www.chattala.store/" />
     <meta property="og:image" content="https://www.chattala.store/assets/images/chottola_logo.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card Tags -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="The Chattala - Imported Foods, Cosmetics & Bakery" />
-    <meta name="twitter:description" content="Shop imported foods, cosmetics and bakery essentials at The Chattala." />
+    <meta name="twitter:description" content="Shop imported foods, cosmetics and bakery essentials at The Chattala with fast delivery." />
     <meta name="twitter:image" content="https://www.chattala.store/assets/images/chottola_logo.png" />
+    <meta name="twitter:creator" content="@chattalastore" />
+    <meta name="twitter:site" content="@chattalastore" />
+
+    <!-- Canonical URL -->
     <link rel="canonical" href="https://www.chattala.store/" />
-    <title>The Chattala - Imported Foods & Cosmetics, Bakery</title>
+
+    <!-- Sitemap & Robots -->
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+    <!-- Preconnect to external resources for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://api.cloudinary.com" />
+
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://cdn.cloudinary.com" />
+    <link rel="dns-prefetch" href="https://use.fontawesome.com" />
+
+    <!-- Manifest for PWA -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <title>The Chattala - Imported Foods & Cosmetics, Bakery | Free Delivery</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Schema.org Organization & Website -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "The Chattala",
+      "url": "https://www.chattala.store",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://www.chattala.store/products?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+    </script>
   </body>
 </html>

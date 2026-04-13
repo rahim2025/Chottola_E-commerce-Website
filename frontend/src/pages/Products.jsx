@@ -49,10 +49,43 @@ const Products = () => {
 
   useEffect(() => {
     const qs = searchParams.toString();
+    const category = searchParams.get('category');
+    const featured = searchParams.get('featured');
+    const search = searchParams.get('search');
+
+    // Dynamically generate title and description based on filters
+    let title = 'Shop Products';
+    let description = 'Browse imported foods, cosmetics and bakery products at The Chattala.';
+    let keywords = 'products, buy online, delivery, Bangladesh';
+
+    if (category) {
+      const categoryName = category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' ');
+      title = `${categoryName} Products | The Chattala`;
+      description = `Shop ${categoryName.toLowerCase()} online at The Chattala with fast delivery. Best prices and quality guaranteed.`;
+      keywords = `${categoryName}, buy ${categoryName}, ${categoryName} online, delivery`;
+    } else if (featured) {
+      title = 'Featured Products | The Chattala';
+      description = 'Shop our handpicked featured products - the best selections at The Chattala with fast delivery.';
+      keywords = 'featured products, best sellers, best deals, popular products';
+    } else if (search) {
+      title = `Products matching "${search}" | The Chattala`;
+      description = `Search results for "${search}" at The Chattala. Fast delivery and trusted quality.`;
+      keywords = `${search}, buy ${search}, ${search} online`;
+    }
+
     applySeo({
-      title: 'Shop Products | The Chattala',
-      description: 'Browse imported foods, cosmetics and bakery products at The Chattala.',
-      path: qs ? `/products?${qs}` : '/products'
+      title: title + ' | The Chattala',
+      description: description,
+      path: qs ? `/products?${qs}` : '/products',
+      keywords: keywords,
+      breadcrumbs: category ? [
+        { name: 'Home', path: '/' },
+        { name: 'Products', path: '/products' },
+        { name: category.charAt(0).toUpperCase() + category.slice(1).replace('-', ' '), path: `/products?category=${category}` }
+      ] : [
+        { name: 'Home', path: '/' },
+        { name: 'Products', path: '/products' }
+      ]
     });
   }, [searchParams]);
 

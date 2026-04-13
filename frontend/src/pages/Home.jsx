@@ -22,8 +22,10 @@ const Home = () => {
   useEffect(() => {
     applySeo({
       title: 'The Chattala - Imported Foods, Cosmetics & Bakery',
-      description: 'Shop imported foods, cosmetics and bakery essentials in Bangladesh with trusted quality and fast delivery.',
-      path: '/'
+      description: 'Shop imported foods, cosmetics and bakery essentials in Bangladesh with trusted quality and fast delivery. Large selection of groceries, personal care, and baked goods.',
+      path: '/',
+      keywords: 'imported foods Bangladesh, cosmetics online, bakery products, grocery delivery Dhaka, organic products, personal care products',
+      type: 'website'
     });
     fetchProducts();
     fetchCategories();
