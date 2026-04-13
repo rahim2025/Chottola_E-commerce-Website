@@ -110,7 +110,6 @@ const Home = () => {
 
   const handleAddToCart = (product) => {
     addToCart(product, 1);
-    toast.success(`${product.name} added to cart!`);
   };
 
   if (loading) return <Loader />;

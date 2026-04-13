@@ -29,9 +29,7 @@ const AddProduct = () => {
     allergens: [],
     certifications: [],
     isActive: true,
-    isFeatured: false,
-    // Inventory data
-    initialStock: ''
+    isFeatured: false
   });
 
   const [images, setImages] = useState([]);
@@ -389,27 +387,6 @@ const AddProduct = () => {
                   <option value="USD">USD</option>
                   <option value="EUR">EUR</option>
                 </select>
-              </div>
-            </div>
-          </div>
-
-          {/* Inventory */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-xl font-semibold mb-4">Initial Inventory</h2>
-            <p className="text-sm text-gray-600 mb-4">Stock will be automatically updated when orders are confirmed</p>
-            <div className="max-w-md">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Stock Available *</label>
-                <input
-                  type="number"
-                  name="initialStock"
-                  value={formData.initialStock}
-                  onChange={handleInputChange}
-                  min="0"
-                  required
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Enter available stock quantity"
-                />
               </div>
             </div>
           </div>
